@@ -106,6 +106,7 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 	stmt->terminated = 1;
 	return SCM_FALSE;
     }else{
+	/* http://www.sqlite.org/c3ref/c_abort.html */
 	Scm_Error("sqlite3_step failed: %d", rc);
     }
 }

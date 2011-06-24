@@ -24,7 +24,7 @@
   (call "Sqlite3EscapeString"))
 
 (define-cproc sqlite3-error-message (db::<sqlite3-handle>)
-  (expr "SCM_MAKE_STR_COPYING(sqlite3_errmsg(db))"))
+  (call <const-cstring> "sqlite3_errmsg"))
 
 (define-cproc sqlite3-statement-p (obj)
   (expr <boolean> "Sqlite3StmtP(obj_scm)"))
