@@ -35,7 +35,7 @@ scm_sqlite3_stmt * Sqlite3StmtMake()
     return stmt;
 }
 
-ScmObj Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
+int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
 {
     sqlite3_stmt * vm = NULL;
     sqlite3 * db;
@@ -126,7 +126,7 @@ ScmObj Sqlite3StmtColumnNames(scm_sqlite3_stmt * stmt)
     return SCM_OBJ(Scm_Reverse(result));
 }
 
-ScmObj Sqlite3StmtClosedP(scm_sqlite3_stmt * stmt)
+int Sqlite3StmtClosedP(scm_sqlite3_stmt * stmt)
 {
     return ((stmt->core == NULL) ? SCM_TRUE : SCM_FALSE);
 }
@@ -151,7 +151,7 @@ ScmObj Sqlite3EscapeString(ScmString * value)
     return result;
 }
 
-ScmObj Sqlite3StmtFinish(scm_sqlite3_stmt * stmt)
+int Sqlite3StmtFinish(scm_sqlite3_stmt * stmt)
 {
     if(stmt->core) {
 	sqlite3_finalize(stmt->core);
@@ -162,7 +162,7 @@ ScmObj Sqlite3StmtFinish(scm_sqlite3_stmt * stmt)
     }
 }
 
-ScmObj Sqlite3Close(ScmObj obj)
+int Sqlite3Close(ScmObj obj)
 {
     sqlite3 * db;
 
@@ -179,11 +179,11 @@ ScmObj Sqlite3Close(ScmObj obj)
     }
 }
 
-ScmObj Sqlite3StatementEndP(scm_sqlite3_stmt * stmt){
+int Sqlite3StatementEndP(scm_sqlite3_stmt * stmt){
     return ((stmt->terminated) ? SCM_TRUE : SCM_FALSE);
 }
 
-ScmObj Sqlite3StmtP(ScmObj obj)
+int Sqlite3StmtP(ScmObj obj)
 {
     return (SCM_SQLITE3_STMT_P(obj) ? SCM_TRUE : SCM_FALSE);
 }

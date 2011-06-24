@@ -33,7 +33,7 @@ typedef struct scm_sqlite3_stmt_rec {
 
 extern void Scm_Init_sqlite3lib(ScmModule *module);
 
-extern ScmObj Sqlite3Close(ScmObj obj);
+extern int Sqlite3Close(ScmObj obj);
 extern int Sqlite3ClosedP(ScmObj obj);
 
 
@@ -41,12 +41,12 @@ extern sqlite3 * Sqlite3Open(ScmString * path);
 
 extern scm_sqlite3_stmt * Sqlite3StmtMake();
 
-extern ScmObj Sqlite3StmtP(ScmObj obj);
+extern int Sqlite3StmtP(ScmObj obj);
 extern ScmObj Sqlite3EscapeString(ScmString * value);
-extern ScmObj Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql);
+extern int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql);
 
-extern ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * scm_stmt);
-extern ScmObj Sqlite3StmtFinish(scm_sqlite3_stmt * scm_stmt);
+extern int Sqlite3StmtStep(scm_sqlite3_stmt * scm_stmt);
+extern int Sqlite3StmtFinish(scm_sqlite3_stmt * scm_stmt);
 extern ScmObj Sqlite3StmtColumnNames(scm_sqlite3_stmt * scm_stmt);
 
 
