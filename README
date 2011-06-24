@@ -1,0 +1,12 @@
+[Requirements]
+
+- Gauche 0.8.7 or later (http://www.practical-scheme.net/gauche/)
+- SQLite 3.3 or later (http://www.sqlite.org/)
+
+[Building]
+
+  % ./configure
+  % make
+  % make install
+
+

@@ -1,0 +1,42 @@
+"#include \"gauche_dbd_sqlite3.h\""
+
+
+(define-cproc sqlite-c-close (obj)
+  (return "Sqlite_c_close"))
+
+(define-cproc sqlite-c-execute (obj stmt sql::<string>)
+  (return "Sqlite_c_execute"))
+
+(define-cproc sqlite-c-open (obj arg::<string>)
+  (return "Sqlite_c_open"))
+
+(define-cproc sqlite-c-p (obj)
+  (return "Sqlite_c_p"))
+
+(define-cproc sqlite-c-escape-string (obj value::<string>)
+  (return "Sqlite_c_escape_string"))
+
+(define-cproc sqlite-c-error-message (obj)
+	(return "Sqlite_c_error_message"))
+
+(define-cproc sqlite-c-stmt-tail-get (obj)
+	(return "Sqlite_c_stmt_tail_get"))
+
+(define-cproc sqlite-c-stmt-p (obj)
+	(return "Sqlite_c_stmt_p"))
+
+(define-cproc sqlite-c-closed-p (obj)
+	(return "Sqlite_c_closed_p"))
+
+(define-cproc sqlite-c-stmt-step (obj)
+	(return "Sqlite_c_stmt_step"))
+
+(define-cproc sqlite-c-stmt-end-p (obj)
+	(return "Sqlite_c_stmt_end_p"))
+
+(define-cproc sqlite-c-stmt-finish (stmt)
+	(return "Sqlite_c_stmt_finish"))
+
+(define-cproc sqlite-c-stmt-column-names (stmt)
+	(return "Sqlite_c_stmt_column_names"))
+

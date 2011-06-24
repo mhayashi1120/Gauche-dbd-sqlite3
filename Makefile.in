@@ -1,0 +1,80 @@
+SHELL       = @SHELL@
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+bindir      = @bindir@
+libdir      = @libdir@
+VPATH       = $(srcdir)
+
+# These may be overridden by make invocators
+DESTDIR  =
+OPTFLAGS = @OPTFLAGS@
+CC       = @CC@
+LIBS     = @LIBS@
+CFLAGS   = @CFLAGS@ 
+LDFLAGS  = @LDFLAGS@
+INSTALL_TYPE = @INSTALL_TYPE@
+
+# Set by configure
+GOSH     = @GOSH@
+GAUCHE_CONFIG = @GAUCHE_CONFIG@
+OBJEXT   = @OBJEXT@
+DSOEXT   = @SOEXT@
+
+INSTALL  = @GAUCHE_INSTALL@
+
+MODULE   = dbd_sqlite3
+
+ARCHFILES = $(MODULE).$(DSOEXT)
+SCMFILES  = dbd/sqlite3.scm
+HEADERS   = 
+
+TARGET    = $(ARCHFILES)
+OBJS      = $(MODULE)_head.$(OBJEXT) \
+            dbd_sqlite3.$(OBJEXT)         \
+	    dbd_sqlite3lib.$(OBJEXT)      \
+            $(MODULE)_tail.$(OBJEXT)
+GENERATED = dbd_sqlite3lib.c $(MODULE)_head.c $(MODULE)_tail.c
+CONFIG_GENERATED = Makefile config.cache config.log config.status \
+		   configure.lineno autom4te*.cache gauche-dbd-sqlite3.gpd
+
+HEADER_INSTALL_DIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)incdir`
+SCM_INSTALL_DIR     = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)libdir`
+ARCH_INSTALL_DIR    = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)archdir`
+
+all : $(TARGET)
+
+.SUFFIXES: .o .stub
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.stub.c:
+	$(GOSH) genstub $<
+
+dbd_sqlite3lib.c : dbd_sqlite3lib.stub
+
+$(MODULE).$(DSOEXT): $(OBJS)
+	$(CC) -Wl,-rpath -Wl,`gauche-config --sysarchdir` $(LDFLAGS) $(MODULE).$(DSOEXT) $(OBJS) $(LIBS)
+
+$(MODULE)_head.c $(MODULE)_tail.c :
+	$(GAUCHE_CONFIG) --fixup-extension $(MODULE)
+
+check : all
+	@rm -f test.log
+	$(GOSH) -I. test.scm > test.log
+
+install : all
+	$(INSTALL) -m 444 -T $(HEADER_INSTALL_DIR) $(HEADERS)
+	$(INSTALL) -m 444 -T $(SCM_INSTALL_DIR) $(SCMFILES) 
+	$(INSTALL) -m 555 -T $(ARCH_INSTALL_DIR) $(ARCHFILES)
+	$(INSTALL) -m 444 -T $(SCM_INSTALL_DIR)/.packages gauche-dbd-sqlite3.gpd
+
+clean :
+	rm -rf core $(TARGET) $(OBJS) $(GENERATED) *~ test.log so_locations
+
+distclean : clean
+	rm -rf $(CONFIG_GENERATED)
+
+maintainer-clean : clean
+	rm -rf $(CONFIG_GENERATED) configure
+
