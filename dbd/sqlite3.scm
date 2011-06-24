@@ -46,12 +46,6 @@
       (lambda () (slot-set! conn '%handle (sqlite3-open db-name))))
     conn))
 
-;;TODO
-;; (define-method dbi-prepare ((c <sqlite3-connection>) 
-;;                             (sql <string>)
-;;                             :key pass-through)
-;;   )
-
 (define-method dbi-execute-using-connection
   ((c <sqlite3-connection>) (q <dbi-query>) params)
   (let* ((handle (slot-ref c '%handle))
@@ -73,11 +67,6 @@
 (define-method dbi-open? ((c <sqlite3-connection>))
   (not (sqlite3-closed-p (slot-ref c '%handle))))
 
-;;TODO
-;; (define-method dbi-open? ((c <sqlite3-query>))
-;;   (not (sqlite3-closed-p (slot-ref c '%handle))))
-
-;;TODO
 (define-method dbi-open? ((c <sqlite3-result-set>))
   (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
 
@@ -86,11 +75,6 @@
     (lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
     (cut sqlite3-close (slot-ref c '%handle))))
 
-;;TODO
-;; (define-method dbi-close ((result-set <sqlite3-query>))
-;;   (sqlite3-statement-finish (slot-ref result-set '%handle)))
-
-;;TODO
 (define-method dbi-close ((result-set <sqlite3-result-set>))
   (sqlite3-statement-finish (slot-ref result-set '%handle)))
 
@@ -154,10 +138,5 @@
       (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
       row)
     #f))
-
-;;TODO
-;; (define-method referencer ((r <sqlite3-result-set>))
-;;   (lambda (r i . fallback)
-;;     (apply list-ref (slot-ref r 'rows) i fallback)))
 
 (provide "dbd/sqlite3")
