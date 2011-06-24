@@ -49,7 +49,7 @@ int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
 		       &vm, 0) != SQLITE_OK)
     {
 	/* Failed */
-	return SCM_FALSE;
+	return 0;
     }
 
     stmt->tail = NULL;
@@ -57,7 +57,7 @@ int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
 
     stmt->executed = 1;
     stmt->terminated = 0;
-    return SCM_TRUE;
+    return 1;
 }
 
 ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
@@ -128,7 +128,7 @@ ScmObj Sqlite3StmtColumnNames(scm_sqlite3_stmt * stmt)
 
 int Sqlite3StmtClosedP(scm_sqlite3_stmt * stmt)
 {
-    return ((stmt->core == NULL) ? SCM_TRUE : SCM_FALSE);
+    return ((stmt->core == NULL) ? 1 : 0);
 }
 
 sqlite3 * Sqlite3Open(ScmString * path)
@@ -180,12 +180,12 @@ int Sqlite3Close(ScmObj obj)
 }
 
 int Sqlite3StatementEndP(scm_sqlite3_stmt * stmt){
-    return ((stmt->terminated) ? SCM_TRUE : SCM_FALSE);
+    return ((stmt->terminated) ? 1 : 0);
 }
 
 int Sqlite3StmtP(ScmObj obj)
 {
-    return (SCM_SQLITE3_STMT_P(obj) ? SCM_TRUE : SCM_FALSE);
+    return (SCM_SQLITE3_STMT_P(obj) ? 1 : 0);
 }
 
 int Sqlite3ClosedP(ScmObj obj)
