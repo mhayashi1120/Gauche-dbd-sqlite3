@@ -1,163 +1,163 @@
 (define-module dbd.sqlite3
-	(use dbi)
-	(use gauche.uvector)
-	(use util.list)
-	(use util.match)
-	(use gauche.collection)
-	;;(use gauche.sequence)
-	(export
-		<sqlite3-driver>
-		<sqlite3-connection>
-		<sqlite3-result-set>
-		)
-	)
+  (use dbi)
+  (use gauche.uvector)
+  (use util.list)
+  (use util.match)
+  (use gauche.collection)
+  (export
+   <sqlite3-driver>
+   <sqlite3-connection>
+   <sqlite3-result-set>
+   )
+  )
 (select-module dbd.sqlite3)
 
 (dynamic-load "dbd_sqlite3")
 
+;;;
+;;; DBI interfaces
+;;;
 
-
-
-
-(define-class <sqlite3-driver> (<dbi-driver>) ())
-
+(define-class <sqlite3-driver> (<dbi-driver>)
+  ())
 
 (define-class <sqlite3-connection> (<dbi-connection>)
-	((%handle :init-keyword :handle :init-value #f)))
+  ((%handle :init-value #f)))
 
-(define-class <sqlite3-result-set> (<collection>)
-	(
-		(%handle :init-keyword :handle :init-value #f)
-		(%prev :init-keyword :prev :init-value #f)
-		(field-names :init-keyword :field-names :init-value #f)
-		))
-
+(define-class <sqlite3-result-set> (<relation> <sequence>)
+  ((%handle :init-value #f)
+   (field-names :init-value #f)
+   (rows :init-form '())))
 
 (define-condition-type <sqlite3-error> <dbi-error> #f
   (error-code))
 
+(define-method dbi-make-connection ((d <sqlite3-driver>)
+                                    (options <string>)
+                                    (option-alist <list>)
+                                    . args)
+  (let* ((db-name
+          (match option-alist
+                 (((maybe-db . #t) . rest) maybe-db)
+                 (else (assoc-ref option-alist "db" #f))))
+         (conn (make <sqlite3-connection>)))
+    (with-error-handler
+      (lambda (e) (error <dbi-error> :message "SQLite3 open failed"))
+      (lambda () (slot-set! conn '%handle (sqlite3-open db-name))))
+    conn))
 
-
-(define
-	sqlite3-step
-	(lambda
-		(result-set)
-		(let1 v (sqlite-c-stmt-step (slot-ref result-set '%handle))
-			(slot-set! result-set '%prev v)
-			v
-			)))
-
-(define
-	sqlite3-execute
-	(lambda
-		(db query)
-		(let
-			(
-				(stmt (make-sqlite-stmt))
-				(result-set (make <sqlite3-result-set>))
-				)
-			(if
-				(sqlite-c-execute db stmt query)
-				(begin
-					(slot-set! result-set '%handle stmt)
-					(slot-set! result-set 'field-names (sqlite-c-stmt-column-names stmt))
-					result-set)
-				#f
-				))))
-
-
-
-(define-method dbi-make-connection
-	(
-		(d <sqlite3-driver>)
-		(options <string>)
-		(option-alist <list>)
-		. args
-		)
-	(let*
-		(
-			(db-name
-				(match option-alist
-					(
-						((maybe-db . #t) . rest) maybe-db)
-					(else (assoc-ref option-alist "db" #f))))
-			(conn (make <sqlite3-connection>))
-			)
-		(with-error-handler
-			(lambda (e) (error <dbi-error> :message "SQLite3 open failed"))
-			(lambda () (slot-set! conn '%handle (sqlite-c-open db-name)))
-			)
-		conn
-		))
-
+;;TODO
+;; (define-method dbi-prepare ((c <sqlite3-connection>) 
+;;                             (sql <string>)
+;;                             :key pass-through)
+;;   )
 
 (define-method dbi-execute-using-connection
-	(
-		(c <sqlite3-connection>)
-		(q <dbi-query>)
-		params
-		)
-	(let*
-		(
-			(handle (slot-ref c '%handle))
-			(query-string (apply (slot-ref q 'prepared) params))
-			(result #f)
-			)
-		(with-error-handler
-			(lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
-			(lambda () (set! result (sqlite3-execute handle query-string)))
-			)
-		(if result
-			(begin
-				(sqlite3-step result)
-				result
-				)
-			(errorf
-				<dbi-error> :error-message (sqlite-c-error-message handle)
-				"SQLite3 query failed: ~a" (sqlite-c-error-message handle))
-			)
-		
-		))
-
-
-
-(define-method dbi-close ((result-set <sqlite3-result-set>))
-	(sqlite-c-stmt-finish (slot-ref result-set '%handle)))
-
-(define-method dbi-close ((c <sqlite3-connection>))
-	(with-error-handler
-		(lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
-		(cut sqlite-c-close (slot-ref c '%handle))
-		)
-	)
-
-
-(define-method dbi-open? ((c <sqlite3-connection>))
-	(not (sqlite-c-closed-p (slot-ref c '%handle))))
+  ((c <sqlite3-connection>) (q <dbi-query>) params)
+  (let* ((handle (slot-ref c '%handle))
+         (query-string (apply (slot-ref q 'prepared) params))
+         (result 
+          (with-error-handler
+            (lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
+            (lambda () (prepare handle query-string)))))
+    (unless result
+      (errorf
+       <dbi-error> :error-message (sqlite3-error-message handle)
+       "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
+    (step result)
+    result))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
-	(sqlite-c-escape-string str))
+  (sqlite3-escape-string str))
+
+(define-method dbi-open? ((c <sqlite3-connection>))
+  (not (sqlite3-closed-p (slot-ref c '%handle))))
+
+;;TODO
+;; (define-method dbi-open? ((c <sqlite3-query>))
+;;   (not (sqlite3-closed-p (slot-ref c '%handle))))
+
+;;TODO
+(define-method dbi-open? ((c <sqlite3-result-set>))
+  (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
+
+(define-method dbi-close ((c <sqlite3-connection>))
+  (with-error-handler
+    (lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
+    (cut sqlite3-close (slot-ref c '%handle))))
+
+;;TODO
+;; (define-method dbi-close ((result-set <sqlite3-query>))
+;;   (sqlite3-statement-finish (slot-ref result-set '%handle)))
+
+;;TODO
+(define-method dbi-close ((result-set <sqlite3-result-set>))
+  (sqlite3-statement-finish (slot-ref result-set '%handle)))
+
+(define (prepare db query)
+  (let ((stmt (make-sqlite-statement))
+        (result-set (make <sqlite3-result-set>)))
+    (if (sqlite3-prepare db stmt query)
+      (begin
+        (slot-set! result-set '%handle stmt)
+        (slot-set! result-set 'field-names (sqlite3-statement-column-names stmt))
+        result-set)
+      #f)))
+
+;;;
+;;; Relation interfaces
+;;;
+
+(define-method relation-column-names ((r <sqlite3-result-set>))
+  (ref r 'field-names))
+
+(define-method relation-accessor ((r <sqlite3-result-set>))
+  (let1 columns (ref r 'field-names)
+    (lambda (row column . maybe-default)
+      (cond
+       ((find-index (cut string=? <> column) columns)
+        => (cut vector-ref row <>))
+       ((pair? maybe-default) (car maybe-default))
+       (else (error "invalud column name:" column))))))
+
+;;TODO
+(define-method relation-modifier ((r <sqlite3-result-set>))
+  )
+
+(define-method relation-rows ((r <sqlite3-result-set>))
+  (slot-ref r 'rows))
+
+;;;
+;;; Sequence interfaces
+;;;
 
 (define-method call-with-iterator ((r <sqlite3-result-set>) proc . option)
-	(let*
-		(
-			(prev #f)
-			(end? (cut sqlite-c-stmt-end-p (slot-ref r '%handle)))
-			(next
-				(lambda
-					()
-					(set! prev (slot-ref r '%prev))
-					(with-error-handler
-						(lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
-						(cut sqlite3-step r)
-						)
-					prev
-					))
-			)
-	  (proc end? next)))
+  (let* ((cache (reverse (slot-ref r 'rows)))
+         (item #f)
+         (next (^ () 
+                  (cond 
+                   ((pair? cache)
+                    (begin0
+                      (car cache)
+                      (set! cache (cdr cache))))
+                   (else
+                    item))))
+         (end? (^ () (and (null? cache)
+                          (begin
+                            (set! item (step r))
+                            (not item))))))
+    (proc end? next)))
 
+(define (step rset)
+  (if-let1 row (sqlite3-statement-step (slot-ref rset '%handle))
+    (begin
+      (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
+      row)
+    #f))
 
-
-
+;;TODO
+;; (define-method referencer ((r <sqlite3-result-set>))
+;;   (lambda (r i . fallback)
+;;     (apply list-ref (slot-ref r 'rows) i fallback)))
 
 (provide "dbd/sqlite3")

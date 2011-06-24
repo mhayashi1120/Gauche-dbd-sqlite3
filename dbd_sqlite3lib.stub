@@ -1,67 +1,46 @@
 "#include \"gauche_dbd_sqlite3.h\""
 
-
-
-
-
 (define-symbol closed? "sym_closed")
 
 (define-type <sqlite3-handle> "sqlite3 *" "sqlite3-handle"
   "SCM_SQLITE3_P" "SQLITE3_HANDLE_UNBOX" "SQLITE3_HANDLE_BOX")
 
-(define-type <sqlite3-stmt> "scm_sqlite3_stmt *" "sqlite3-stmt-handle"
+(define-type <sqlite3-statement> "scm_sqlite3_stmt *" "sqlite3-statement-handle"
   "SCM_SQLITE3_STMT_P" "SQLITE3_STMT_HANDLE_UNBOX" "SQLITE3_STMT_HANDLE_BOX")
 
+(define-cproc make-sqlite-statement ()
+  (expr <sqlite3-statement> "Sqlite3Stmt_make()"))
 
+(define-cproc sqlite3-close (db::<sqlite3-handle>)
+  (expr <boolean> "Sqlite3Close(db_scm)"))
 
+(define-cproc sqlite3-prepare (db::<sqlite3-handle> stmt::<sqlite3-statement> sql::<string>)
+  (expr <boolean> "Sqlite3Prepare(db_scm, stmt, sql)"))
 
+(define-cproc sqlite3-open (arg::<string>)
+  (expr <sqlite3-handle> "Sqlite3Open(arg)"))
 
-(define-cproc make-sqlite-stmt ()
-  (expr <sqlite3-stmt> "Sqlite_c_stmt_make()"))
+(define-cproc sqlite3-escape-string (value::<string>)
+  (call "Sqlite3EscapeString"))
 
-
-(define-cproc sqlite-c-close (db::<sqlite3-handle>)
-  (expr <boolean> "Sqlite_c_close(db_scm)"))
-
-(define-cproc sqlite-c-execute (db::<sqlite3-handle> stmt::<sqlite3-stmt> sql::<string>)
-  (expr <boolean> "Sqlite_c_execute(db_scm, stmt, sql)"))
-
-
-
-(define-cproc sqlite-c-open (arg::<string>)
-  (expr <sqlite3-handle> "Sqlite_c_open(arg)"))
-
-
-
-(define-cproc sqlite-c-p (obj)
-  (expr <boolean> "Sqlite_c_p(obj_scm)"))
-
-(define-cproc sqlite-c-escape-string (value::<string>)
-  (call "Sqlite_c_escape_string"))
-
-(define-cproc sqlite-c-error-message (db::<sqlite3-handle>)
+(define-cproc sqlite3-error-message (db::<sqlite3-handle>)
 	(expr "SCM_MAKE_STR_COPYING(sqlite3_errmsg(db))"))
 
-(define-cproc sqlite-c-stmt-tail-get (stmt::<sqlite3-stmt>)
-	(call "Sqlite_c_stmt_tail_get"))
+(define-cproc sqlite3-statement-p (obj)
+	(expr <boolean> "Sqlite3StmtP(obj_scm)"))
 
-(define-cproc sqlite-c-stmt-p (obj)
-	(expr <boolean> "Sqlite_c_stmt_p(obj_scm)"))
+(define-cproc sqlite3-closed-p (db::<sqlite3-handle>)
+	(expr <boolean> "Sqlite3ClosedP(db_scm)"))
 
-(define-cproc sqlite-c-closed-p (db::<sqlite3-handle>)
-	(expr <boolean> "Sqlite_c_closed_p(db_scm)"))
+(define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
+	(call "Sqlite3StmtStep"))
 
-(define-cproc sqlite-c-stmt-step (stmt::<sqlite3-stmt>)
-	(call "Sqlite_c_stmt_step"))
+(define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>)
+	(expr <boolean> "Sqlite3StmtClosedP(stmt)"))
 
-(define-cproc sqlite-c-stmt-end-p (stmt::<sqlite3-stmt>)
-	(expr <boolean> "Sqlite_c_stmt_end_p(stmt)"))
+(define-cproc sqlite3-statement-finish (stmt::<sqlite3-statement>)
+	(expr <boolean> "Sqlite3StmtFinish(stmt)"))
 
-(define-cproc sqlite-c-stmt-finish (stmt::<sqlite3-stmt>)
-	(expr <boolean> "Sqlite_c_stmt_finish(stmt)"))
-
-(define-cproc sqlite-c-stmt-column-names (stmt::<sqlite3-stmt>)
-	(call "Sqlite_c_stmt_column_names"))
-
-
+(define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
+	(call "Sqlite3StmtColumnNames"))
 
