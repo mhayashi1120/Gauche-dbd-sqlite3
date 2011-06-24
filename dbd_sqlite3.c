@@ -156,9 +156,9 @@ int Sqlite3StmtFinish(scm_sqlite3_stmt * stmt)
     if(stmt->core) {
 	sqlite3_finalize(stmt->core);
 	stmt->core = NULL;
-	return SCM_TRUE;
+	return 1;
     }else{
-	return SCM_FALSE;
+	return 0;
     }
 }
 
