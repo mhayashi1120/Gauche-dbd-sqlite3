@@ -60,7 +60,7 @@ int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
     return 1;
 }
 
-int Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
+ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 {
     unsigned int i, num;
     int rc;
@@ -104,7 +104,7 @@ int Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 	return SCM_OBJ(result);
     }else if (rc == SQLITE_DONE) {
 	stmt->terminated = 1;
-	return 0;
+	return SCM_FALSE;
     }else{
 	Scm_Error("sqlite3_step failed: %d", rc);
     }
