@@ -34,7 +34,7 @@ typedef struct scm_sqlite3_stmt_rec {
 extern void Scm_Init_sqlite3lib(ScmModule *module);
 
 extern ScmObj Sqlite3Close(ScmObj obj);
-extern ScmObj Sqlite3ClosedP(ScmObj obj);
+extern int Sqlite3ClosedP(ScmObj obj);
 
 
 extern sqlite3 * Sqlite3Open(ScmString * path);

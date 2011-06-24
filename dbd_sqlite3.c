@@ -188,7 +188,7 @@ ScmObj Sqlite3StmtP(ScmObj obj)
     return (SCM_SQLITE3_STMT_P(obj) ? SCM_TRUE : SCM_FALSE);
 }
 
-ScmObj Sqlite3ClosedP(ScmObj obj)
+int Sqlite3ClosedP(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
