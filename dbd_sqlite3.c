@@ -214,9 +214,6 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     /* Create the module if it doesn't exist yet. */
     mod = SCM_MODULE(SCM_FIND_MODULE("dbd.sqlite3", TRUE));
 
-    /* TODO */
-    //Scm_InitBuiltinClass(&Scm_SqliteStmtClass, "<sqlite3-statement>", NULL, sizeof(ScmSqliteStmt), mod);
-
     /* Register classes */
     ScmSqlite3Class = 
 	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>", NULL, Sqlite3_finalize, 0);
