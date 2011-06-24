@@ -8,6 +8,7 @@
    <sqlite3-driver>
    <sqlite3-connection>
    <sqlite3-result-set>
+   sqlite3-error-message
    )
   )
 (select-module dbd.sqlite3)
@@ -42,7 +43,7 @@
                  (else (assoc-ref option-alist "db" #f))))
          (conn (make <sqlite3-connection>)))
     (with-error-handler
-      (lambda (e) (error <dbi-error> :message "SQLite3 open failed"))
+      (lambda (e) (error <sqlite3-error> :message "SQLite3 open failed"))
       (lambda () (slot-set! conn '%handle (sqlite3-open db-name))))
     conn))
 
@@ -52,13 +53,14 @@
          (query-string (apply (slot-ref q 'prepared) params))
          (result 
           (with-error-handler
-            (lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
-            (lambda () (prepare handle query-string)))))
-    (unless result
-      (errorf
-       <dbi-error> :error-message (sqlite3-error-message handle)
-       "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
-    (step result)
+            (lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
+            (lambda () 
+              (let ((res (prepare handle query-string)))
+                (unless res
+                  (errorf
+                   <sqlite3-error> :error-message (sqlite3-error-message handle)
+                   "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
+                (step res))))))
     result))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
@@ -72,8 +74,8 @@
 
 (define-method dbi-close ((c <sqlite3-connection>))
   (with-error-handler
-    (lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
-    (cut sqlite3-close (slot-ref c '%handle))))
+    (lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
+    (lambda () (sqlite3-close (slot-ref c '%handle)))))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
   (sqlite3-statement-finish (slot-ref result-set '%handle)))
@@ -118,18 +120,18 @@
 (define-method call-with-iterator ((r <sqlite3-result-set>) proc . option)
   (let* ((cache (reverse (slot-ref r 'rows)))
          (item #f)
-         (next (^ () 
-                  (cond 
-                   ((pair? cache)
-                    (begin0
-                      (car cache)
-                      (set! cache (cdr cache))))
-                   (else
-                    item))))
-         (end? (^ () (and (null? cache)
-                          (begin
-                            (set! item (step r))
-                            (not item))))))
+         (next (lambda () 
+                 (cond 
+                  ((pair? cache)
+                   (begin0
+                     (car cache)
+                     (set! cache (cdr cache))))
+                  (else
+                   item))))
+         (end? (lambda () (and (null? cache)
+                               (begin
+                                 (set! item (step r))
+                                 (not item))))))
     (proc end? next)))
 
 (define (step rset)
