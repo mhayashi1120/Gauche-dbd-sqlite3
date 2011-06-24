@@ -169,13 +169,13 @@ int Sqlite3Close(ScmObj obj)
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
     if(Sqlite3ClosedP(obj)) {
-	return SCM_FALSE;
+	return 0;
     } else {
 	Scm_ForeignPointerAttrSet(SCM_FOREIGN_POINTER(obj), sym_closed, SCM_TRUE);
 
 	db = SQLITE3_HANDLE_UNBOX(obj);
 	sqlite3_close(db);
-	return SCM_TRUE;
+	return 1;
     }
 }
 
