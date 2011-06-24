@@ -9,7 +9,7 @@
   "SCM_SQLITE3_STMT_P" "SQLITE3_STMT_HANDLE_UNBOX" "SQLITE3_STMT_HANDLE_BOX")
 
 (define-cproc make-sqlite-statement ()
-  (expr <sqlite3-statement> "Sqlite3Stmt_make()"))
+  (expr <sqlite3-statement> "Sqlite3StmtMake()"))
 
 (define-cproc sqlite3-close (db::<sqlite3-handle>)
   (expr <boolean> "Sqlite3Close(db_scm)"))
@@ -24,26 +24,26 @@
   (call "Sqlite3EscapeString"))
 
 (define-cproc sqlite3-error-message (db::<sqlite3-handle>)
-	(expr "SCM_MAKE_STR_COPYING(sqlite3_errmsg(db))"))
+  (expr "SCM_MAKE_STR_COPYING(sqlite3_errmsg(db))"))
 
 (define-cproc sqlite3-statement-p (obj)
-	(expr <boolean> "Sqlite3StmtP(obj_scm)"))
+  (expr <boolean> "Sqlite3StmtP(obj_scm)"))
 
 (define-cproc sqlite3-closed-p (db::<sqlite3-handle>)
-	(expr <boolean> "Sqlite3ClosedP(db_scm)"))
+  (expr <boolean> "Sqlite3ClosedP(db_scm)"))
 
 (define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>)
-	(expr <boolean> "Sqlite3StatementEndP(stmt)"))
+  (expr <boolean> "Sqlite3StatementEndP(stmt)"))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
-	(call "Sqlite3StmtStep"))
+  (call "Sqlite3StmtStep"))
 
 (define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>)
-	(expr <boolean> "Sqlite3StmtClosedP(stmt)"))
+  (expr <boolean> "Sqlite3StmtClosedP(stmt)"))
 
 (define-cproc sqlite3-statement-finish (stmt::<sqlite3-statement>)
-	(expr <boolean> "Sqlite3StmtFinish(stmt)"))
+  (expr <boolean> "Sqlite3StmtFinish(stmt)"))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
-	(call "Sqlite3StmtColumnNames"))
+  (call "Sqlite3StmtColumnNames"))
 

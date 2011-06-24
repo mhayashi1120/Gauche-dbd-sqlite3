@@ -39,7 +39,7 @@ extern int Sqlite3ClosedP(ScmObj obj);
 
 extern sqlite3 * Sqlite3Open(ScmString * path);
 
-extern scm_sqlite3_stmt * Sqlite3Stmt_make();
+extern scm_sqlite3_stmt * Sqlite3StmtMake();
 
 extern int Sqlite3StmtP(ScmObj obj);
 extern ScmObj Sqlite3EscapeString(ScmString * value);
