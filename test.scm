@@ -70,15 +70,28 @@
 		(map
 			(lambda (row) (list (dbi-get-value row 0) (dbi-get-value row 1)))
 			(dbi-execute
-				(dbi-prepare connection
-					"SELECT id, age FROM tbl1 ORDER BY age ASC;")
+				(dbi-prepare connection "SELECT id, age FROM tbl1 ORDER BY age ASC;")
 				)))
 
 
 
-(dbi-close connection)
+(test* "(dbi-open? connection)"
+		#t
+		(dbi-open? connection))
+
+(test* "(dbi-close connection)"
+		#t
+		(dbi-close connection))
+
+
+(test* "(dbi-open? connection)"
+		#f
+		(dbi-open? connection))
+
+
 
 
 (test-end)
-
 (sys-unlink "test.db")
+
+

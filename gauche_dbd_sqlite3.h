@@ -6,50 +6,57 @@
 #include <sqlite3.h>
 
 
-SCM_CLASS_DECL(Scm_SqliteClass);
-#define SCM_CLASS_SQLITE (&Scm_SqliteClass)
 
-typedef struct ScmSqliteRec {
-	SCM_HEADER;
-	sqlite3 *core;
-	const char * dbname;
-} ScmSqlite;
+extern ScmClass * ScmSqlite3Class;
+typedef ScmForeignPointer ScmSqlite3;
 
-#define SCM_SQLITE(obj)		((ScmSqlite *)(obj))
-#define SCM_SQLITE_P(obj)	(SCM_XTYPEP(obj, SCM_CLASS_SQLITE))
+#define SCM_SQLITE3_P(obj)	(SCM_XTYPEP(obj, ScmSqlite3Class))
+#define SQLITE3_HANDLE_UNBOX(obj) SCM_FOREIGN_POINTER_REF(sqlite3*, obj)
+#define SQLITE3_HANDLE_BOX(handle) \
+	Scm_MakeForeignPointer(ScmSqlite3Class, handle)
 
 
 
-SCM_CLASS_DECL(Scm_SqliteStmtClass);
-#define SCM_CLASS_SQLITE_STMT (&Scm_SqliteStmtClass)
+extern ScmClass * ScmSqlite3StmtClass;
+typedef ScmForeignPointer ScmSqliteStmt3;
 
-typedef struct ScmSqliteStmtRec {
-	SCM_HEADER;
+#define SCM_SQLITE3_STMT_P(obj)	(SCM_XTYPEP(obj, ScmSqlite3StmtClass))
+#define SQLITE3_STMT_HANDLE_UNBOX(obj) SCM_FOREIGN_POINTER_REF(scm_sqlite3_stmt *, obj)
+#define SQLITE3_STMT_HANDLE_BOX(handle) \
+	Scm_MakeForeignPointer(ScmSqlite3StmtClass, handle)
+
+typedef struct scm_sqlite3_stmt_rec {
 	sqlite3_stmt *core;
 	const char * tail;
 	int executed;
 	int terminated;
-} ScmSqliteStmt;
-#define SCM_SQLITE_STMT(obj)		((ScmSqliteStmt *)(obj))
-#define SCM_SQLITE_STMT_P(obj)	(SCM_XTYPEP(obj, SCM_CLASS_SQLITE_STMT))
+} scm_sqlite3_stmt;
+
+
 
 
 
 extern void Scm_Init_sqlite3lib(ScmModule *module);
 
 
-extern ScmObj Sqlite_c_close(ScmObj obj);
-extern ScmObj Sqlite_c_open(ScmObj obj, ScmString * arg_path);
-extern ScmObj Sqlite_c_p(ScmObj obj);
-extern ScmObj Sqlite_c_stmt_p(ScmObj obj);
-extern ScmObj Sqlite_c_closed_p(ScmObj obj);
-extern ScmObj Sqlite_c_escape_string(ScmObj obj, ScmString * value);
-extern ScmObj Sqlite_c_execute(ScmObj db_obj, ScmObj stmt_obj, ScmString * sql);
-extern ScmObj Sqlite_c_error_message(ScmObj obj);
-extern ScmObj Sqlite_c_stmt_tail_get(ScmObj obj);
-extern ScmObj Sqlite_c_stmt_step(ScmObj obj);
-extern ScmObj Sqlite_c_stmt_end_p(ScmObj obj);
-extern ScmObj Sqlite_c_stmt_finish(ScmObj obj);
-extern ScmObj Sqlite_c_stmt_column_names(ScmObj obj);
+extern int Sqlite_c_close(ScmObj obj);
+extern int Sqlite_c_closed_p(ScmObj obj);
+
+
+extern sqlite3 * Sqlite_c_open(ScmString * path);
+
+extern int Sqlite_c_p(ScmObj db_obj);
+
+extern scm_sqlite3_stmt * Sqlite_c_stmt_make();
+
+extern int Sqlite_c_stmt_p(ScmObj obj);
+extern ScmObj Sqlite_c_escape_string(ScmString * value);
+extern int Sqlite_c_execute(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql);
+
+extern ScmObj Sqlite_c_stmt_tail_get(scm_sqlite3_stmt * scm_stmt);
+extern ScmObj Sqlite_c_stmt_step(scm_sqlite3_stmt * scm_stmt);
+extern int Sqlite_c_stmt_end_p(scm_sqlite3_stmt * scm_stmt);
+extern int Sqlite_c_stmt_finish(scm_sqlite3_stmt * scm_stmt);
+extern ScmObj Sqlite_c_stmt_column_names(scm_sqlite3_stmt * scm_stmt);
 
 

@@ -3,85 +3,65 @@
 #include <string.h>
 #include <stdlib.h>
 
-static void Sqlite_finalize(ScmObj obj, void *data)
+
+
+
+ScmClass * ScmSqlite3Class;
+ScmClass * ScmSqlite3StmtClass;
+static ScmObj sym_closed;
+
+static void Sqlite3_finalize(ScmObj obj)
 {
-	ScmSqlite * db = SCM_SQLITE(obj);
-	if(db->core != NULL) Sqlite_c_close(obj);
-	if(db->dbname != NULL){
-		free((char *) db->dbname);
-		db->dbname = NULL;
-	};
+	SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
+	Sqlite_c_close(obj);
 }
-static void SqliteStmt_finalize(ScmObj obj, void *data)
+
+
+
+
+static void Sqlite3Stmt_finalize(ScmObj obj)
 {
-	ScmSqliteStmt * stmt = SCM_SQLITE_STMT(obj);
-	if(stmt->core != NULL) Sqlite_c_stmt_finish(obj);
+	SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
+	
+	scm_sqlite3_stmt * stmt = SQLITE3_STMT_HANDLE_UNBOX(obj);
+	if(stmt->core != NULL) Sqlite_c_stmt_finish(stmt);
 }
+
+
 
 static void db_check(ScmObj obj)
 {
-	ScmSqlite * db;
-	if(!SCM_SQLITE_P(obj)) Scm_Error("<sqlite3-handle> required, but got %S", obj);
-	db = SCM_SQLITE(obj);
-	if(db->dbname == NULL) Scm_Error("<sqlite3-handle> not opened yet");
-	if(db->core == NULL) Scm_Error("<sqlite3-handle> already closed");
-}
-
-static void stmt_check(ScmObj obj){
-	if(!SCM_SQLITE_STMT_P(obj)) Scm_Error("<sqlite3-stmt> required, but got %S", obj);
+	if(Sqlite_c_closed_p(obj)) Scm_Error("<sqlite3-handle> already closed");
 }
 
 
-static ScmObj sqlite_allocate(ScmClass *klass, ScmObj initargs);
-static void sqlite_print(ScmObj obj, ScmPort *out, ScmWriteContext *ctx)
+
+
+
+static void stmt_check(scm_sqlite3_stmt * stmt){
+	if(! stmt->executed) Scm_Error("<sqlite3-stmt-handle> not executed yet");
+	if(stmt->terminated) Scm_Error("<sqlite3-stmt-handle> already closed");
+}
+
+
+
+
+
+
+
+
+
+scm_sqlite3_stmt * Sqlite_c_stmt_make()
 {
-	ScmSqlite * db = SCM_SQLITE(obj);
-	Scm_Printf(out, "#<<sqlite3-handle> %p \"%s\">", db->core, db->dbname);
-}
-SCM_DEFINE_BUILTIN_CLASS(Scm_SqliteClass,
-			 sqlite_print, NULL, NULL,
-			 sqlite_allocate,
-			 NULL);
-static ScmObj sqlite_allocate(ScmClass *klass, ScmObj initargs)
-{
-	ScmSqlite * db = SCM_NEW(ScmSqlite);
-	SCM_SET_CLASS(db, SCM_CLASS_SQLITE);
+	scm_sqlite3_stmt * stmt = malloc(sizeof(scm_sqlite3_stmt));
 
-	Scm_RegisterFinalizer(SCM_OBJ(db), Sqlite_finalize, NULL);
-
-	db->core = NULL;
-	db->dbname = NULL;
-
-	return SCM_OBJ(db);
-}
-
-
-
-static ScmObj sqlite_stmt_allocate(ScmClass *klass, ScmObj initargs);
-static void sqlite_stmt_print(ScmObj obj, ScmPort *out, ScmWriteContext *ctx)
-{
-	ScmSqliteStmt * db = SCM_SQLITE_STMT(obj);
-	Scm_Printf(out, "#<<sqlite3-stmt> %p>", db->core);
-}
-
-
-
-SCM_DEFINE_BUILTIN_CLASS(Scm_SqliteStmtClass,
-			 sqlite_stmt_print, NULL, NULL,
-			 sqlite_stmt_allocate,
-			 NULL
-			 );
-
-static ScmObj sqlite_stmt_allocate(ScmClass *klass, ScmObj initargs)
-{
-	ScmSqliteStmt * stmt = SCM_NEW(ScmSqliteStmt);
-	SCM_SET_CLASS(stmt, SCM_CLASS_SQLITE_STMT);
-
-	Scm_RegisterFinalizer(SCM_OBJ(stmt), SqliteStmt_finalize, NULL);
-
+	stmt->tail = NULL;
 	stmt->core = NULL;
-
-	return SCM_OBJ(stmt);
+	
+	stmt->executed = 0;
+	stmt->terminated = 0;
+	
+	return stmt;
 }
 
 
@@ -92,57 +72,45 @@ static ScmObj sqlite_stmt_allocate(ScmClass *klass, ScmObj initargs)
 
 
 
-
-
-
-
-
-ScmObj Sqlite_c_execute(ScmObj db_obj, ScmObj stmt_obj, ScmString * sql){
-	ScmSqlite * db;
-	ScmSqliteStmt * stmt = SCM_SQLITE_STMT(stmt_obj);
+int Sqlite_c_execute(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql){
 	sqlite3_stmt * vm = NULL;
+	sqlite3 * db;
 	int status;
 
 	db_check(db_obj);
-	db = SCM_SQLITE(db_obj);
-	if(sqlite3_prepare(db->core, Scm_GetStringConst(sql),
+	db = SQLITE3_HANDLE_UNBOX(db_obj);
+
+	if(sqlite3_prepare(db, Scm_GetStringConst(sql),
 		SCM_STRING_SIZE(sql),
 		&vm, 0) != SQLITE_OK)
 	{
-		return SCM_FALSE;
+		return 0;
 	}
 	
 	stmt->tail = NULL;
 	stmt->core = vm;
 	
 	stmt->executed = 1;
-	return SCM_OBJ(stmt);
+	stmt->terminated = 0;
+	return 1;
 }
 
 
-ScmObj Sqlite_c_error_message(ScmObj obj){
-	ScmSqlite * db = SCM_SQLITE(obj);
-	return SCM_MAKE_STR_COPYING(sqlite3_errmsg(db->core));
-}
 
 
-ScmObj Sqlite_c_stmt_step(ScmObj obj)
+ScmObj Sqlite_c_stmt_step(scm_sqlite3_stmt * stmt)
 {
 	unsigned int i, num;
 	int rc;
 	ScmObj result;
 	ScmObj value;
-	ScmSqliteStmt * stmt;
-	
-	stmt_check(obj);
-	stmt = SCM_SQLITE_STMT(obj);
-	if(! stmt->executed) Scm_Error("not executed yet");
-	if(stmt->terminated) return SCM_FALSE;
+
+	stmt_check(stmt);
 
 	rc = sqlite3_step(stmt->core);
 	if(rc == SQLITE_ROW){
 		num = sqlite3_column_count(stmt->core);
-		result = Scm_MakeList(0, SCM_FALSE);
+		result = Scm_MakeVector(num, SCM_FALSE);
 		
 		for(i = 0; i < num; i++){
 			switch (sqlite3_column_type(stmt->core, i))
@@ -169,9 +137,9 @@ ScmObj Sqlite_c_stmt_step(ScmObj obj)
 							Scm_Error("unknown sqlite3_column_type");
 			}
 
-			result = Scm_Cons(value, result);
+			Scm_VectorSet(SCM_VECTOR(result), i, value);
 		}
-		return SCM_OBJ(Scm_Reverse(result));
+		return SCM_OBJ(result);
 	}else if(rc == SQLITE_DONE){
 		stmt->terminated = 1;
 		return SCM_FALSE;
@@ -182,13 +150,11 @@ ScmObj Sqlite_c_stmt_step(ScmObj obj)
 }
 
 
-ScmObj Sqlite_c_stmt_column_names(ScmObj obj){
-	ScmSqliteStmt * stmt;
+ScmObj Sqlite_c_stmt_column_names(scm_sqlite3_stmt * stmt){
 	int i, num;
 	ScmObj value;
 	ScmObj result;
-	stmt_check(obj);
-	stmt = SCM_SQLITE_STMT(obj);
+	
 	num = sqlite3_column_count(stmt->core);
 	result = Scm_MakeList(0, SCM_FALSE);
 
@@ -200,48 +166,31 @@ ScmObj Sqlite_c_stmt_column_names(ScmObj obj){
 }
 
 
-ScmObj Sqlite_c_stmt_end_p(ScmObj obj){
-	ScmSqliteStmt * stmt;
-	stmt_check(obj);
-	stmt = SCM_SQLITE_STMT(obj);
-	return ((stmt->terminated) ? SCM_TRUE : SCM_FALSE);
+int Sqlite_c_stmt_end_p(scm_sqlite3_stmt * stmt){
+	return ((stmt->terminated) ? 1 : 0);
 }
 
-ScmObj Sqlite_c_stmt_tail_get(ScmObj obj){
-	ScmSqliteStmt * stmt;
-	stmt_check(obj);
-	stmt = SCM_SQLITE_STMT(obj);
+ScmObj Sqlite_c_stmt_tail_get(scm_sqlite3_stmt * stmt){
 	return ((stmt->tail == NULL ) ? SCM_FALSE : SCM_MAKE_STR_COPYING(stmt->tail));
 }
 
 
 
 
-ScmObj Sqlite_c_open(ScmObj obj, ScmString * dbpath)
+sqlite3 * Sqlite_c_open(ScmString * path)
 {
-	sqlite3 * dbt;
-	ScmSqlite * db;
-	char * dbname;
+	sqlite3 * db;
 
-	db = SCM_SQLITE(obj);
+	if(sqlite3_open(Scm_GetString(path) , &db) != SQLITE_OK) Scm_Error("OPEN ERROR");
 
-	if(sqlite3_open(Scm_GetString(dbpath) , &dbt) != SQLITE_OK) return SCM_FALSE;
-
-	dbname = malloc((sizeof(char) * SCM_STRING_SIZE(dbpath)) + 1);
-	strncpy(dbname, Scm_GetStringConst(dbpath), SCM_STRING_SIZE(dbpath));
-	dbname[SCM_STRING_SIZE(dbpath)] = '\0';
-
-	db->core = dbt;
-	db->dbname = (const char *) dbname;
-	return SCM_OBJ(db);
-
-
+	return db;
 }
 
 
-ScmObj Sqlite_c_escape_string(ScmObj obj, ScmString * value){
+ScmObj Sqlite_c_escape_string(ScmString * value){
 	char * tmp;
 	ScmObj result;
+	
 	tmp = sqlite3_mprintf("%q", Scm_GetStringConst(value));
 	result = SCM_MAKE_STR_COPYING(tmp);
 	sqlite3_free(tmp);
@@ -250,14 +199,13 @@ ScmObj Sqlite_c_escape_string(ScmObj obj, ScmString * value){
 
 
 
-ScmObj Sqlite_c_stmt_finish(ScmObj obj){
-	ScmSqliteStmt * stmt = SCM_SQLITE_STMT(obj);
+int Sqlite_c_stmt_finish(scm_sqlite3_stmt * stmt){
 	if(stmt->core){
 		sqlite3_finalize(stmt->core);
 		stmt->core = NULL;
-		return SCM_TRUE;
+		return 1;
 	}else{
-		return SCM_FALSE;
+		return 0;
 	}
 }
 
@@ -271,44 +219,52 @@ ScmObj Sqlite_c_stmt_finish(ScmObj obj){
 
 
 
-
-ScmObj Sqlite_c_close(ScmObj obj)
+int Sqlite_c_close(ScmObj obj)
 {
-	ScmSqlite *db;
-	db_check(obj);
-	
-	db = SCM_SQLITE(obj);
-	if(db->core != NULL){
-		sqlite3_close(db->core);
-		db->core = NULL;
-		return SCM_TRUE;
+	sqlite3 * db;
+
+	SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
+
+
+	if(Sqlite_c_closed_p(obj)){
+		return 0;
 	}else{
-		return SCM_FALSE;
+		Scm_ForeignPointerAttrSet(
+			SCM_FOREIGN_POINTER(obj),
+			sym_closed,
+			SCM_TRUE
+			);
+
+		db = SQLITE3_HANDLE_UNBOX(obj);
+		sqlite3_close(db);
+		return 1;
 	}
 }
 
 
-ScmObj Sqlite_c_p(ScmObj obj)
+
+int Sqlite_c_p(ScmObj obj)
 {
-	return (SCM_SQLITE_P(obj) ? SCM_TRUE : SCM_FALSE);
+	return (SCM_SQLITE3_P(obj) ? 1 : 0);
 }
 
-ScmObj Sqlite_c_stmt_p(ScmObj obj)
+int Sqlite_c_stmt_p(ScmObj obj)
 {
-	return (SCM_SQLITE_STMT_P(obj) ? SCM_TRUE : SCM_FALSE);
+	return (SCM_SQLITE3_STMT_P(obj) ? 1 : 1);
 }
 
 
-ScmObj Sqlite_c_closed_p(ScmObj obj)
+int Sqlite_c_closed_p(ScmObj obj)
 {
-	ScmSqlite *db;
-	if(!SCM_SQLITE_P(obj)) Scm_Error("<sqlite3-handle> required, but got %S", obj);
-	db = SCM_SQLITE(obj);
-	if((db->core == NULL) && (db->dbname != NULL)){
-		return SCM_TRUE;
-	}else{
-		return SCM_FALSE;
-	}
+	SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
+
+	return SCM_TRUEP(
+	 	Scm_ForeignPointerAttrGet(
+			SCM_FOREIGN_POINTER(obj),
+	 		sym_closed,
+			SCM_FALSE
+			)
+		);
 }
 
 
@@ -322,8 +278,13 @@ ScmObj Scm_Init_dbd_sqlite3(void)
 	SCM_INIT_EXTENSION(dbd_sqlite3);
 	mod = SCM_MODULE(SCM_FIND_MODULE("dbd.sqlite3", TRUE));
 	
-	Scm_InitBuiltinClass(&Scm_SqliteClass, "<sqlite3-handle>", NULL, sizeof(ScmSqlite), mod);
-	Scm_InitBuiltinClass(&Scm_SqliteStmtClass, "<sqlite3-stmt>", NULL, sizeof(ScmSqliteStmt), mod);
+	
+	//Scm_InitBuiltinClass(&Scm_SqliteStmtClass, "<sqlite3-stmt>", NULL, sizeof(ScmSqliteStmt), mod);
+
+	ScmSqlite3Class = Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>", NULL, Sqlite3_finalize, 0);
+	ScmSqlite3StmtClass = Scm_MakeForeignPointerClass(mod, "<sqlite3-stmt-handle>", NULL, Sqlite3Stmt_finalize, 0);
+	
+	
 	Scm_Init_dbd_sqlite3lib(mod);
 }
 

@@ -9,7 +9,7 @@
 		<sqlite3-driver>
 		<sqlite3-connection>
 		<sqlite3-result-set>
-		<sqlite3-error>)
+		)
 	)
 (select-module dbd.sqlite3)
 
@@ -33,19 +33,10 @@
 		))
 
 
+(define-condition-type <sqlite3-error> <dbi-error> #f
+  (error-code))
 
 
-
-
-(define
-	sqlite3-db-open
-	(lambda
-		(path)
-		(let1 db (make <sqlite3-handle>)
-			(if
-				(sqlite-c-open db path)
-				db
-				#f))))
 
 (define
 	sqlite3-step
@@ -57,12 +48,12 @@
 			)))
 
 (define
-	sqlite3-db-execute
+	sqlite3-execute
 	(lambda
 		(db query)
 		(let
 			(
-				(stmt (make <sqlite3-stmt>))
+				(stmt (make-sqlite-stmt))
 				(result-set (make <sqlite3-result-set>))
 				)
 			(if
@@ -74,16 +65,6 @@
 				#f
 				))))
 
-(define
-	sqlite3-db-close
-	(lambda (db) (sqlite-c-close db)))
-
-(define
-	sqlite3-db-closed?
-	(lambda (db) (sqlite-c-closed-p db)))
-
-
-(define-condition-type <sqlite3-error> <dbi-error> #f)
 
 
 (define-method dbi-make-connection
@@ -101,10 +82,11 @@
 						((maybe-db . #t) . rest) maybe-db)
 					(else (assoc-ref option-alist "db" #f))))
 			(conn (make <sqlite3-connection>))
-			(db (sqlite3-db-open db-name))
 			)
-		(unless db (error <sqlite3-error> :message "SQLite3 open failed"))
-		(slot-set! conn '%handle db)
+		(with-error-handler
+			(lambda (e) (error <dbi-error> :message "SQLite3 open failed"))
+			(lambda () (slot-set! conn '%handle (sqlite-c-open db-name)))
+			)
 		conn
 		))
 
@@ -122,8 +104,8 @@
 			(result #f)
 			)
 		(with-error-handler
-			(lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
-			(lambda () (set! result (sqlite3-db-execute handle query-string)))
+			(lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
+			(lambda () (set! result (sqlite3-execute handle query-string)))
 			)
 		(if result
 			(begin
@@ -131,7 +113,7 @@
 				result
 				)
 			(errorf
-				<sqlite3-error> :error-message (sqlite-c-error-message handle)
+				<dbi-error> :error-message (sqlite-c-error-message handle)
 				"SQLite3 query failed: ~a" (sqlite-c-error-message handle))
 			)
 		
@@ -144,17 +126,17 @@
 
 (define-method dbi-close ((c <sqlite3-connection>))
 	(with-error-handler
-		(lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
-		(cut sqlite3-db-close (slot-ref c '%handle))
+		(lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
+		(cut sqlite-c-close (slot-ref c '%handle))
 		)
 	)
 
 
 (define-method dbi-open? ((c <sqlite3-connection>))
-	(not (sqlite3-db-closed? (slot-ref c '%handle))))
+	(not (sqlite-c-closed-p (slot-ref c '%handle))))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
-	(sqlite-c-escape-string (slot-ref c '%handle) str))
+	(sqlite-c-escape-string str))
 
 (define-method call-with-iterator ((r <sqlite3-result-set>) proc . option)
 	(let*
@@ -166,7 +148,7 @@
 					()
 					(set! prev (slot-ref r '%prev))
 					(with-error-handler
-						(lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
+						(lambda (e) (error <dbi-error> :message (slot-ref e 'message)))
 						(cut sqlite3-step r)
 						)
 					prev
