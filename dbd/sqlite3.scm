@@ -62,7 +62,7 @@
                    <sqlite3-error> :error-message (sqlite3-error-message handle)
                    "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
                 res)))))
-    (step res)
+    (step result)
     result))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
