@@ -26,8 +26,9 @@
   ((%handle :init-value #f)))
 
 (define-class <sqlite3-result-set> (<relation> <sequence>)
-  ((%handle :init-value #f)
-   (field-names :init-value #f)
+  ((%db :init-keyword :db)
+   (%handle :init-keyword :handle)
+   (field-names :init-keyword :field-names)
    (rows :init-form '())))
 
 (define-condition-type <sqlite3-error> <dbi-error> #f
@@ -60,7 +61,8 @@
                   (errorf
                    <sqlite3-error> :error-message (sqlite3-error-message handle)
                    "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
-                (step res))))))
+                res)))))
+    (step res)
     result))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
@@ -81,13 +83,12 @@
   (sqlite3-statement-finish (slot-ref result-set '%handle)))
 
 (define (prepare db query)
-  (let ((stmt (make-sqlite-statement))
-        (result-set (make <sqlite3-result-set>)))
+  (let ((stmt (make-sqlite-statement)))
     (if (sqlite3-prepare db stmt query)
-      (begin
-        (slot-set! result-set '%handle stmt)
-        (slot-set! result-set 'field-names (sqlite3-statement-column-names stmt))
-        result-set)
+      (make <sqlite3-result-set>
+        :db db
+        :handle stmt
+        :field-names (sqlite3-statement-column-names stmt))
       #f)))
 
 ;;;
@@ -111,7 +112,7 @@
   )
 
 (define-method relation-rows ((r <sqlite3-result-set>))
-  (slot-ref r 'rows))
+  (map identity r))
 
 ;;;
 ;;; Sequence interfaces
@@ -140,10 +141,14 @@
     (and (not (sqlite3-statement-end? handle))
          (sqlite3-statement-step handle)))
 
-  (if-let1 row (get (slot-ref rset '%handle))
-    (begin
-      (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
-      row)
-    #f))
+  (with-error-handler
+    (lambda (e) (error <sqlite3-error> 
+                       :message (sqlite3-error-message (slot-ref rset '%db))))
+    (lambda ()
+      (if-let1 row (get (slot-ref rset '%handle))
+        (begin
+          (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
+          row)
+        #f))))
 
 (provide "dbd/sqlite3")
