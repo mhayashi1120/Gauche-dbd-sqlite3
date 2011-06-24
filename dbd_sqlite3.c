@@ -182,6 +182,10 @@ int Sqlite3Close(ScmObj obj)
     }
 }
 
+int Sqlite3StatementEndP(scm_sqlite3_stmt * stmt){
+    return ((stmt->terminated) ? 1 : 0);
+}
+
 int Sqlite3StmtP(ScmObj obj)
 {
     return (SCM_SQLITE3_STMT_P(obj) ? 1 : 0);

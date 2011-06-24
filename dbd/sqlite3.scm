@@ -133,7 +133,12 @@
     (proc end? next)))
 
 (define (step rset)
-  (if-let1 row (sqlite3-statement-step (slot-ref rset '%handle))
+
+  (define (get handle)
+    (and (not (sqlite3-statement-end? handle))
+         (sqlite3-statement-step handle)))
+
+  (if-let1 row (get (slot-ref rset '%handle))
     (begin
       (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
       row)

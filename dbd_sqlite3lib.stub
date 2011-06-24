@@ -32,6 +32,9 @@
 (define-cproc sqlite3-closed-p (db::<sqlite3-handle>)
 	(expr <boolean> "Sqlite3ClosedP(db_scm)"))
 
+(define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>)
+	(expr <boolean> "Sqlite3StatementEndP(stmt)"))
+
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
 	(call "Sqlite3StmtStep"))
 
