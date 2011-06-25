@@ -145,4 +145,55 @@
         row)
       #f)))
 
+(define (call-statement conn stmt)
+  (let ((q (dbi-make-query conn)))
+    (dbi-execute-query q stmt)))
+
+;;;
+;;;TODO dbi extensions
+;;;
+
+;;TODO isolation level
+(define-class <dbi-transaction> ()
+  ((connection :init-keyword :connection)))
+
+(define-method dbi-begin-transaction ((conn <dbi-connection>) . args)
+  (make <dbi-transaction> :connection conn))
+
+(define-method dbi-commit ((tran <dbi-transaction>) . args))
+
+(define-method dbi-rollback ((tran <dbi-transaction>) . args))
+
+(define (call-with-transaction conn proc . flags)
+  (let1 tran (apply dbi-begin-transaction conn flags)
+    (guard (e (else (dbi-rollback tran) (raise e)))
+      (begin0
+        (proc)
+        (dbi-commit tran)))))
+
+(export-if-defined call-with-transaction)
+
+
+;;;
+;;; Transaction interfaces
+;;;
+
+(define-class <sqlite3-transaction> (<dbi-transaction>)
+  ((name :init-keyword :name)))
+
+(define-method dbi-begin-transaction ((conn <sqlite3-connection>) . args)
+  (let-keywords args ((name ""))
+    (rlet1 tran (make <sqlite3-transaction> :connection conn)
+           (call-statement conn #`"BEGIN TRANSACTION \",name\""))))
+
+(define-method dbi-commit ((tran <sqlite3-transaction>) . args)
+  (let-keywords args ((name ""))
+    (call-statement (slot-ref tran 'connection)
+                    #`"END TRANSACTION \",name\"")))
+
+(define-method dbi-rollback ((tran <sqlite3-transaction>) . args)
+  (let-keywords args ((name ""))
+    (call-statement (slot-ref tran 'connection)
+                    #`"COMMIT TRANSACTION \",name\"")))
+
 (provide "dbd/sqlite3")
