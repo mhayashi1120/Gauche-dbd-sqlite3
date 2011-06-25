@@ -128,7 +128,7 @@ AC_DEFUN([AC_GAUCHE_OPTFLAGS],
 case "$target" in
   i686-*) I686OPT="-DUSE_I686_PREFETCH";;
 esac
-if test $CC = "gcc"; then
+if test "$CC" = "gcc"; then
   case "$target" in
     *mingw*) ;;
     *)       GCCOPT="-fomit-frame-pointer";;

@@ -48,7 +48,8 @@ extern int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sq
 extern ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * scm_stmt);
 extern int Sqlite3StmtFinish(scm_sqlite3_stmt * scm_stmt);
 extern ScmObj Sqlite3StmtColumnNames(scm_sqlite3_stmt * scm_stmt);
-
+extern int Sqlite3StmtEndP(scm_sqlite3_stmt * stmt);
+extern int Sqlite3StmtClosedP(scm_sqlite3_stmt * stmt);
 
 /* Epilogue */
 SCM_DECL_END

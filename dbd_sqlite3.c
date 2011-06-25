@@ -180,7 +180,8 @@ int Sqlite3Close(ScmObj obj)
     }
 }
 
-int Sqlite3StatementEndP(scm_sqlite3_stmt * stmt){
+int Sqlite3StmtEndP(scm_sqlite3_stmt * stmt)
+{
     return ((stmt->terminated) ? 1 : 0);
 }
 
