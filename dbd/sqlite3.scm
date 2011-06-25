@@ -43,9 +43,8 @@
                  (((maybe-db . #t) . rest) maybe-db)
                  (else (assoc-ref option-alist "db" #f))))
          (conn (make <sqlite3-connection>)))
-    (with-error-handler
-      (lambda (e) (error <sqlite3-error> :message "SQLite3 open failed"))
-      (lambda () (slot-set! conn '%handle (sqlite3-open db-name))))
+    (guard (e (else (error <sqlite3-error> :message "SQLite3 open failed")))
+      (slot-set! conn '%handle (sqlite3-open db-name)))
     conn))
 
 (define-method dbi-execute-using-connection
@@ -53,15 +52,13 @@
   (let* ((handle (slot-ref c '%handle))
          (query-string (apply (slot-ref q 'prepared) params))
          (result 
-          (with-error-handler
-            (lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
-            (lambda () 
-              (let ((res (prepare handle query-string)))
-                (unless res
-                  (errorf
-                   <sqlite3-error> :error-message (sqlite3-error-message handle)
-                   "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
-                res)))))
+          (guard (e (else (error <sqlite3-error> :message (slot-ref e 'message))))
+            (let ((res (prepare handle query-string)))
+              (unless res
+                (errorf
+                 <sqlite3-error> :error-message (sqlite3-error-message handle)
+                 "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
+              res))))
     (step result)
     result))
 
@@ -75,9 +72,8 @@
   (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
-  (with-error-handler
-    (lambda (e) (error <sqlite3-error> :message (slot-ref e 'message)))
-    (lambda () (sqlite3-close (slot-ref c '%handle)))))
+  (guard (e (else (error <sqlite3-error> :message (slot-ref e 'message))))
+    (sqlite3-close (slot-ref c '%handle))))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
   (sqlite3-statement-finish (slot-ref result-set '%handle)))
@@ -141,14 +137,12 @@
     (and (not (sqlite3-statement-end? handle))
          (sqlite3-statement-step handle)))
 
-  (with-error-handler
-    (lambda (e) (error <sqlite3-error> 
-                       :message (sqlite3-error-message (slot-ref rset '%db))))
-    (lambda ()
-      (if-let1 row (get (slot-ref rset '%handle))
-        (begin
-          (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
-          row)
-        #f))))
+  (guard (e (else (error <sqlite3-error> 
+                         :message (sqlite3-error-message (slot-ref rset '%db)))))
+    (if-let1 row (get (slot-ref rset '%handle))
+      (begin
+        (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
+        row)
+      #f)))
 
 (provide "dbd/sqlite3")
