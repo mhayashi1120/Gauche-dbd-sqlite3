@@ -32,14 +32,14 @@
 		(dbi-open?
 			(dbi-execute
 				(dbi-prepare connection
-					"INSERT INTO tbl1 VALUES(1, 'name 1', x'0001', 0.8);"))))
+					"INSERT INTO tbl1 VALUES(1, 'name 1', x'0101', 0.8);"))))
 
 (test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES(?, ?, ?);\")"
        #t
        (dbi-open?
         (dbi-execute
-         (dbi-prepare connection "INSERT INTO tbl1 VALUES(?, ?, ?, ?);")
-         2 "name 2" "blob 2" 0.7)))
+         (dbi-prepare connection "INSERT INTO tbl1 VALUES(?, ?, x'0202', ?);")
+         2 "name 2" 0.7)))
 
 (test* "(dbi-do connection \"INSERT INTO tbl1 (id) VALUES(3);\")"
        #t
@@ -53,7 +53,7 @@
         'field-names))
 
 (test* "(dbi-execute (dbi-prepare connection  \"SELECT id, age FROM ..."
-       '((1 "name 1" "blob 1" 0.8) (2 "name 2" "blob 2" 0.7) (3 #f #f #f))
+       '((1 "name 1" #u8(1 1) 0.8) (2 "name 2" #u8(2 2) 0.7) (3 #f #f #f))
        (map
         (lambda (row) (list 
                        (dbi-get-value row 0)
