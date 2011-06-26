@@ -32,14 +32,14 @@
 		(dbi-open?
 			(dbi-execute
 				(dbi-prepare connection
-					"INSERT INTO tbl1 VALUES(1, 'name 1', 'image', 0.8);"))))
+					"INSERT INTO tbl1 VALUES(1, 'name 1', 'blob 1', 0.8);"))))
 
 (test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES(?, ?, ?);\")"
        #t
        (dbi-open?
         (dbi-execute
          (dbi-prepare connection "INSERT INTO tbl1 VALUES(?, ?, ?, ?);")
-         2 "name 2" #(1 2) 0.7)))
+         2 "name 2" "blob 2" 0.7)))
 
 (test* "(dbi-do connection \"INSERT INTO tbl1 (id) VALUES(3);\")"
        #t
@@ -53,23 +53,27 @@
         'field-names))
 
 (test* "(dbi-execute (dbi-prepare connection  \"SELECT id, age FROM ..."
-       '((1 "name 1" #(i m a g e) 0.8) (2 "name 2" #(1 2) 0.7) (3 #f #f #f))
+       '((1 "name 1" "blob 1" 0.8) (2 "name 2" "blob 2" 0.7) (3 #f #f #f))
        (map
-        (lambda (row) (list (dbi-get-value row 0) (dbi-get-value row 1)))
+        (lambda (row) (list 
+                       (dbi-get-value row 0)
+                       (dbi-get-value row 1)
+                       (dbi-get-value row 2)
+                       (dbi-get-value row 3)))
         (dbi-execute
          (dbi-prepare connection "SELECT id, name, image, rate FROM tbl1 ORDER BY id ASC;"))))
 
 (test* "Checking transaction commit"
-       '("tran1" "tran2")
+       '(101 102)
        (begin
          (call-with-transaction connection
            (lambda ()
-             (dbi-do connection "INSERT INTO tbl1 (id) VALUES('tran1');")
-             (dbi-do connection "INSERT INTO tbl1 (id) VALUES('tran2');")))
+             (dbi-do connection "INSERT INTO tbl1 (id) VALUES(101);")
+             (dbi-do connection "INSERT INTO tbl1 (id) VALUES(102);")))
          (map
           (lambda (row) (dbi-get-value row 0))
           (dbi-execute 
-           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN ('tran1', 'tran2')")))))
+           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN (101, 102)")))))
 
 (test* "Checking transaction rollback"
        '()
@@ -77,13 +81,13 @@
          (guard (e (else #f))
            (call-with-transaction connection
              (lambda ()
-               (dbi-do connection "INSERT INTO tbl1 (id) VALUES('tran3');")
+               (dbi-do connection "INSERT INTO tbl1 (id) VALUES(103);")
                ;; syntax error statement
-               (dbi-do connection "INSERT INTO tbl (id) VALUES('tran4');"))))
+               (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))
          (map
           (lambda (row) (dbi-get-value row 0))
           (dbi-execute 
-           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN ('tran3', 'tran4')")))))
+           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN (103, 104)")))))
 
 (test* "(dbi-open? connection)"
 		#t
