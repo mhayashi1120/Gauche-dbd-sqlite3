@@ -1,1 +1,7 @@
+* follow dbi todo interface
 http://www.kahua.org/show/dev/DBI#H-lowvragr
+
+
+* Check C implementation is
+
+imitate sqlite3-ruby 
