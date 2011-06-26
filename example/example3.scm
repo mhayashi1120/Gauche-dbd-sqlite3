@@ -6,7 +6,7 @@
   (dbi-connect "dbi:sqlite3:example.db"))
 
 (call-with-transaction connection
-  (lambda ()
+  (lambda (tran)
     (dbi-execute
      (dbi-prepare connection
                   "INSERT INTO tbl1 VALUES('foo', 26, 0);"))
