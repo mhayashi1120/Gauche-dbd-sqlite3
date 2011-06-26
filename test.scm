@@ -57,6 +57,32 @@
         (dbi-execute
          (dbi-prepare connection "SELECT id, age FROM tbl1 ORDER BY age ASC;"))))
 
+(test* "Checking transaction commit"
+       '("tran1" "tran2")
+       (begin
+         (call-with-transaction connection
+           (lambda ()
+             (dbi-do connection "INSERT INTO tbl1 (id) VALUES('tran1');")
+             (dbi-do connection "INSERT INTO tbl1 (id) VALUES('tran2');")))
+         (map
+          (lambda (row) (dbi-get-value row 0))
+          (dbi-execute 
+           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN ('tran1', 'tran2')")))))
+
+(test* "Checking transaction rollback"
+       '()
+       (begin
+         (guard (e (else #f))
+           (call-with-transaction connection
+             (lambda ()
+               (dbi-do connection "INSERT INTO tbl1 (id) VALUES('tran3');")
+               ;; syntax error statement
+               (dbi-do connection "INSERT INTO tbl (id) VALUES('tran4');"))))
+         (map
+          (lambda (row) (dbi-get-value row 0))
+          (dbi-execute 
+           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN ('tran3', 'tran4')")))))
+
 (test* "(dbi-open? connection)"
 		#t
 		(dbi-open? connection))

@@ -145,10 +145,6 @@
         row)
       #f)))
 
-(define (call-statement conn stmt)
-  (let ((q (dbi-make-query conn)))
-    (dbi-execute-query q stmt)))
-
 ;;;
 ;;;TODO dbi extensions
 ;;;
@@ -182,18 +178,24 @@
   ((name :init-keyword :name)))
 
 (define-method dbi-begin-transaction ((conn <sqlite3-connection>) . args)
-  (let-keywords args ((name ""))
+  (let-keywords args ((name #f))
     (rlet1 tran (make <sqlite3-transaction> :connection conn)
-           (call-statement conn #`"BEGIN TRANSACTION \",name\""))))
+      (dbi-do conn (string-append 
+                    "BEGIN TRANSACTION"
+                    (or (and name #`" \",name\"") ""))))))
 
 (define-method dbi-commit ((tran <sqlite3-transaction>) . args)
-  (let-keywords args ((name ""))
-    (call-statement (slot-ref tran 'connection)
-                    #`"END TRANSACTION \",name\"")))
+  (let-keywords args ((name #f))
+    (dbi-do (slot-ref tran 'connection)
+            (string-append 
+             "END TRANSACTION"
+             (or (and name #`" \",name\"") "")))))
 
 (define-method dbi-rollback ((tran <sqlite3-transaction>) . args)
-  (let-keywords args ((name ""))
-    (call-statement (slot-ref tran 'connection)
-                    #`"COMMIT TRANSACTION \",name\"")))
+  (let-keywords args ((name #f))
+    (dbi-do (slot-ref tran 'connection)
+            (string-append 
+             "ROLLBACK TRANSACTION"
+             (or (and name #`" \",name\"") "")))))
 
 (provide "dbd/sqlite3")
