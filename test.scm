@@ -66,7 +66,7 @@
        '(101 102)
        (begin
          (call-with-transaction connection
-           (lambda ()
+           (lambda (tran)
              (dbi-do connection "INSERT INTO tbl1 (id) VALUES(101);")
              (dbi-do connection "INSERT INTO tbl1 (id) VALUES(102);")))
          (map
@@ -78,7 +78,7 @@
        (begin
          (guard (e (else #f))
            (call-with-transaction connection
-             (lambda ()
+             (lambda (tran)
                (dbi-do connection "INSERT INTO tbl1 (id) VALUES(103);")
                ;; syntax error statement
                (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))

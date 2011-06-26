@@ -161,11 +161,12 @@
 
 (define-method dbi-rollback ((tran <dbi-transaction>) . args))
 
+;; proc accept one arg (<dbi-transaction>)
 (define (call-with-transaction conn proc . flags)
   (let1 tran (apply dbi-begin-transaction conn flags)
     (guard (e (else (dbi-rollback tran) (raise e)))
       (begin0
-        (proc)
+        (proc tran)
         (dbi-commit tran)))))
 
 (define-method dbi-tables ((conn <dbi-connection>))
