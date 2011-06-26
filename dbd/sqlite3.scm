@@ -190,7 +190,7 @@
 (define-method dbi-commit ((tran <sqlite3-transaction>) . args)
   (dbi-do (slot-ref tran 'connection)
           (string-append 
-           "END TRANSACTION")))
+           "COMMIT TRANSACTION")))
 
 (define-method dbi-rollback ((tran <sqlite3-transaction>) . args)
   (dbi-do (slot-ref tran 'connection)
