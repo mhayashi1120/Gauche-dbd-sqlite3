@@ -45,8 +45,7 @@ int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
     db = SQLITE3_HANDLE_UNBOX(db_obj);
 
     if (sqlite3_prepare(db, Scm_GetStringConst(sql),
-		       SCM_STRING_SIZE(sql),
-		       &vm, 0) != SQLITE_OK)
+			SCM_STRING_SIZE(sql), &vm, 0) != SQLITE_OK)
     {
 	/* Failed */
 	return 0;
@@ -93,6 +92,7 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 		//	(unsigned char *)sqlite3_column_blob(stmt->core, i));
 		//break;
 	    case SQLITE_NULL:
+		/* TODO :null? */
 		value = SCM_FALSE;
 		break;
 	    default:
@@ -154,11 +154,11 @@ ScmObj Sqlite3EscapeString(ScmString * value)
 
 int Sqlite3StmtFinish(scm_sqlite3_stmt * stmt)
 {
-    if(stmt->core) {
+    if (stmt->core) {
 	sqlite3_finalize(stmt->core);
 	stmt->core = NULL;
 	return 1;
-    }else{
+    } else {
 	return 0;
     }
 }
@@ -169,7 +169,7 @@ int Sqlite3Close(ScmObj obj)
 
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
-    if(Sqlite3ClosedP(obj)) {
+    if (Sqlite3ClosedP(obj)) {
 	return 0;
     } else {
 	Scm_ForeignPointerAttrSet(SCM_FOREIGN_POINTER(obj), sym_closed, SCM_TRUE);
