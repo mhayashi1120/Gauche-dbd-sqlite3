@@ -32,7 +32,7 @@
 		(dbi-open?
 			(dbi-execute
 				(dbi-prepare connection
-					"INSERT INTO tbl1 VALUES(1, 'name 1', 'blob 1', 0.8);"))))
+					"INSERT INTO tbl1 VALUES(1, 'name 1', x'0001', 0.8);"))))
 
 (test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES(?, ?, ?);\")"
        #t
