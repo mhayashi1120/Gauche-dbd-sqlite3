@@ -168,7 +168,10 @@
         (proc)
         (dbi-commit tran)))))
 
-(export-if-defined call-with-transaction)
+(define-method dbi-tables ((conn <dbi-connection>))
+  '())
+
+(export-if-defined call-with-transaction dbi-tables)
 
 
 ;;;
@@ -192,5 +195,10 @@
   (dbi-do (slot-ref tran 'connection)
           (string-append 
            "ROLLBACK TRANSACTION")))
+
+(define-method dbi-tables ((conn <sqlite3-connection>))
+  (map
+   (lambda (row) (dbi-get-value row 0))
+   (dbi-do conn "SELECT name FROM sqlite_master WHERE type='table'")))
 
 (provide "dbd/sqlite3")

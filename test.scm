@@ -28,11 +28,11 @@
                       "CREATE TABLE tbl1(id INTEGER, name TEXT, image NONE, rate REAL);"))))
 
 (test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES...\")"
-		#t
-		(dbi-open?
-			(dbi-execute
-				(dbi-prepare connection
-					"INSERT INTO tbl1 VALUES(1, 'name 1', x'0101', 0.8);"))))
+       #t
+       (dbi-open?
+        (dbi-execute
+         (dbi-prepare connection
+                      "INSERT INTO tbl1 VALUES(1, 'name 1', x'0101', 0.8);"))))
 
 (test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES...\")"
        #t
@@ -60,8 +60,7 @@
                        (dbi-get-value row 1)
                        (dbi-get-value row 2)
                        (dbi-get-value row 3)))
-        (dbi-execute
-         (dbi-prepare connection "SELECT id, name, image, rate FROM tbl1 ORDER BY id ASC;"))))
+        (dbi-do connection "SELECT id, name, image, rate FROM tbl1 ORDER BY id ASC;")))
 
 (test* "Checking transaction commit"
        '(101 102)
@@ -72,8 +71,7 @@
              (dbi-do connection "INSERT INTO tbl1 (id) VALUES(102);")))
          (map
           (lambda (row) (dbi-get-value row 0))
-          (dbi-execute 
-           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN (101, 102)")))))
+          (dbi-do connection "SELECT id FROM tbl1 WHERE id IN (101, 102)"))))
 
 (test* "Checking transaction rollback"
        '()
@@ -86,8 +84,11 @@
                (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))
          (map
           (lambda (row) (dbi-get-value row 0))
-          (dbi-execute 
-           (dbi-prepare connection "SELECT id FROM tbl1 WHERE id IN (103, 104)")))))
+          (dbi-do connection "SELECT id FROM tbl1 WHERE id IN (103, 104)"))))
+
+(test* "Checking dbi-tables"
+       '("tbl1")
+       (dbi-tables connection))
 
 (test* "(dbi-open? connection)"
 		#t
