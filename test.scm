@@ -34,7 +34,7 @@
 				(dbi-prepare connection
 					"INSERT INTO tbl1 VALUES(1, 'name 1', x'0101', 0.8);"))))
 
-(test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES(?, ?, ?);\")"
+(test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES...\")"
        #t
        (dbi-open?
         (dbi-execute
