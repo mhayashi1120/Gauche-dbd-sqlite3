@@ -86,13 +86,12 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 		value = SCM_MAKE_STR_COPYING(sqlite3_column_text(stmt->core, i));
 		break;
 	    case SQLITE_BLOB:
-		Scm_Error("not supported yet: SQLITE_BLOB");
-		//value = Scm_MakeU8VectorFromArray(
-		//	sqlite3_column_bytes(stmt->core, i),
-		//	(unsigned char *)sqlite3_column_blob(stmt->core, i));
-		//break;
+		/* Scm_Error("not supported yet: SQLITE_BLOB"); */
+		value = Scm_MakeU8VectorFromArray(
+			sqlite3_column_bytes(stmt->core, i),
+			(unsigned char *)sqlite3_column_blob(stmt->core, i));
+		break;
 	    case SQLITE_NULL:
-		/* TODO :null? */
 		value = SCM_FALSE;
 		break;
 	    default:

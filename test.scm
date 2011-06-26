@@ -22,40 +22,42 @@
        #t
        (dbi-open?
         (dbi-execute
+         ;; http://www.sqlite.org/datatype3.html
+         ;;TODO NUMERIC
          (dbi-prepare connection
-                      "CREATE TABLE tbl1(id CHAR(10), age SMALLINT, active BOOLEAN);"))))
+                      "CREATE TABLE tbl1(id INTEGER, name TEXT, image NONE, rate REAL);"))))
 
-(test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES('foo', 26, 0);\")"
+(test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES...\")"
 		#t
 		(dbi-open?
 			(dbi-execute
 				(dbi-prepare connection
-					"INSERT INTO tbl1 VALUES('foo', 26, 0);"))))
+					"INSERT INTO tbl1 VALUES(1, 'name 1', 'image', 0.8);"))))
 
 (test* "(dbi-execute (dbi-prepare connection \"INSERT INTO tbl1 VALUES(?, ?, ?);\")"
        #t
        (dbi-open?
         (dbi-execute
-         (dbi-prepare connection "INSERT INTO tbl1 VALUES(?, ?, ?);")
-         "bar" 32 0)))
+         (dbi-prepare connection "INSERT INTO tbl1 VALUES(?, ?, ?, ?);")
+         2 "name 2" #(1 2) 0.7)))
 
-(test* "(dbi-do connection \"INSERT INTO tbl1 (id, age) VALUES('baz');\")"
+(test* "(dbi-do connection \"INSERT INTO tbl1 (id) VALUES(3);\")"
        #t
        (dbi-open?
-        (dbi-do connection "INSERT INTO tbl1 (id) VALUES('baz');")))
+        (dbi-do connection "INSERT INTO tbl1 (id) VALUES(3);")))
 
 (test* "(slot-ref (dbi-do connection \"SELECT * FROM tbl1;\") 'field-names)"
-       '("id" "age" "active")
+       '("id" "name" "image" "rate")
        (slot-ref
         (dbi-do connection "SELECT * FROM tbl1;")
         'field-names))
 
 (test* "(dbi-execute (dbi-prepare connection  \"SELECT id, age FROM ..."
-       '(("baz" #f) ("foo" 26) ("bar" 32))
+       '((1 "name 1" #(i m a g e) 0.8) (2 "name 2" #(1 2) 0.7) (3 #f #f #f))
        (map
         (lambda (row) (list (dbi-get-value row 0) (dbi-get-value row 1)))
         (dbi-execute
-         (dbi-prepare connection "SELECT id, age FROM tbl1 ORDER BY age ASC;"))))
+         (dbi-prepare connection "SELECT id, name, image, rate FROM tbl1 ORDER BY id ASC;"))))
 
 (test* "Checking transaction commit"
        '("tran1" "tran2")
