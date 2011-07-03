@@ -97,7 +97,7 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 		    }
 
 		    values[0] = v & 0xffffffff;
-		    values[1] = v >> 32;
+		    values[1] = v >> 32; /* TODO */
 		    value = Scm_MakeBignumFromUIArray(sign, values, 2);
 		}
 		else
