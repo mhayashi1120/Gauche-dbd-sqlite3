@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <gauche/bignum.h>
 
 ScmClass * ScmSqlite3Class;
 ScmClass * ScmSqlite3StmtClass;
@@ -77,8 +78,34 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 	    switch (sqlite3_column_type(stmt->core, i))
 	    {
 	    case SQLITE_INTEGER:
-		value = SCM_MAKE_INT(sqlite3_column_int(stmt->core, i));
+	    {
+		long long int v = sqlite3_column_int64(stmt->core, i);
+
+		if (v & 0x7fffffff00000000L)
+		{
+		    long values[2];
+		    int sign = 0;
+
+		    if (v >= 0)
+		    {
+			sign = 0;
+		    }
+		    else
+		    {
+			v = -v;
+			sign = -1;
+		    }
+
+		    values[0] = v & 0xffffffff;
+		    values[1] = v >> 32;
+		    value = Scm_MakeBignumFromUIArray(sign, values, 2);
+		}
+		else
+		{
+		    value = Scm_MakeInteger(v);
+		}
 		break;
+	    }
 	    case SQLITE_FLOAT:
 		value = Scm_MakeFlonum(sqlite3_column_double(stmt->core, i));
 		break;

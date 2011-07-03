@@ -9,11 +9,22 @@
    <sqlite3-connection>
    <sqlite3-result-set>
    sqlite3-error-message
-   )
-  )
+   sqlite3-table-columns
+
+   ))
 (select-module dbd.sqlite3)
 
 (dynamic-load "dbd_sqlite3")
+
+;;;
+;;; Sqlite3 specific interfaces
+;;;
+
+(define (sqlite3-table-columns conn table)
+  (map
+   (lambda (row) (dbi-get-value row 1)
+           )
+   (dbi-do conn "PRAGMA table_info(?)" '() table)))
 
 ;;;
 ;;; DBI interfaces
