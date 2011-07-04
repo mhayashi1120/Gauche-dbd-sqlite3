@@ -81,24 +81,23 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
 	    {
 		long long int v = sqlite3_column_int64(stmt->core, i);
 
-		if (v & 0x7fffffff00000000L)
+		if (v > LONG_MAX)
 		{
-		    long values[2];
-		    int sign = 0;
+		    u_long values[2];
 
-		    if (v >= 0)
-		    {
-			sign = 0;
-		    }
-		    else
-		    {
-			v = -v;
-			sign = -1;
-		    }
+		    values[0] = v & 0xffffffffL;
+		    values[1] = v >> SCM_WORD_BITS;
+		    value = Scm_MakeBignumFromUIArray(1, values, values[1] ? 2 : 1);
+		}
+		else if (v < LONG_MIN)
+		{
+		    u_long values[2];
 
-		    values[0] = v & 0xffffffff;
-		    values[1] = v >> 32; /* TODO */
-		    value = Scm_MakeBignumFromUIArray(sign, values, 2);
+		    v = -v;
+
+		    values[0] = v & 0xffffffffL;
+		    values[1] = v >> SCM_WORD_BITS;
+		    value = Scm_MakeBignumFromUIArray(-1, values, values[1] ? 2 : 1);
 		}
 		else
 		{

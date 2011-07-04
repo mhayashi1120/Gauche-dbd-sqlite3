@@ -22,8 +22,8 @@
 
 (define (sqlite3-table-columns conn table)
   (map
-   (lambda (row) (dbi-get-value row 1)
-           )
+   (lambda (row) 
+     (dbi-get-value row 1))
    (dbi-do conn "PRAGMA table_info(?)" '() table)))
 
 ;;;
@@ -172,10 +172,14 @@
 
 (define-method dbi-rollback ((tran <dbi-transaction>) . args))
 
-;; proc accept one arg (<dbi-transaction>)
+;; proc accept a <dbi-transaction>.
 (define (call-with-transaction conn proc . flags)
   (let1 tran (apply dbi-begin-transaction conn flags)
-    (guard (e (else (dbi-rollback tran) (raise e)))
+    (guard (e (else 
+               (guard (e2 (else 
+                           (raise (make-compound-condition e e2))))
+                      (dbi-rollback tran)
+                      (raise e))))
       (begin0
         (proc tran)
         (dbi-commit tran)))))
@@ -195,22 +199,18 @@
 
 (define-method dbi-begin-transaction ((conn <sqlite3-connection>) . args)
   (rlet1 tran (make <sqlite3-transaction> :connection conn)
-    (dbi-do conn (string-append 
-                  "BEGIN TRANSACTION"))))
+    (dbi-do conn "BEGIN TRANSACTION")))
 
 (define-method dbi-commit ((tran <sqlite3-transaction>) . args)
   (dbi-do (slot-ref tran 'connection)
-          (string-append 
-           "COMMIT TRANSACTION")))
+          "COMMIT TRANSACTION"))
 
 (define-method dbi-rollback ((tran <sqlite3-transaction>) . args)
   (dbi-do (slot-ref tran 'connection)
-          (string-append 
-           "ROLLBACK TRANSACTION")))
+          "ROLLBACK TRANSACTION"))
 
 (define-method dbi-tables ((conn <sqlite3-connection>))
   (map
    (lambda (row) (dbi-get-value row 0))
    (dbi-do conn "SELECT name FROM sqlite_master WHERE type='table'")))
 
-(provide "dbd/sqlite3")
