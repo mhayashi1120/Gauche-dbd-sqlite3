@@ -53,9 +53,11 @@
 
 (test* "Checking field names"
        '("id" "name" "image" "rate")
-       (slot-ref
-        (dbi-do connection "SELECT * FROM tbl1;")
-        'field-names))
+       (let1 rset (dbi-do connection "SELECT * FROM tbl1;")
+         ;;TODO fix after auto close
+         (begin0
+           (slot-ref rset 'field-names)
+           (dbi-close rset))))
 
 (test* "Checking current inserted values"
        '(#(1 "name 1" #u8(1 1) 0.8) #(2 "name 2" #u8(2 2) 0.7) #(3 #f #f #f))
@@ -141,8 +143,17 @@
          (dbi-do connection "INSERT INTO tbl1 (id) VALUES(9223372036854775807);")
          (select-rows "SELECT id FROM tbl1 WHERE id = 9223372036854775807")))
 
+(test* "Checking auto increment id"
+       1
+       (begin
+         (dbi-do connection "CREATE TABLE tbl2(id INTEGER PRIMARY KEY);")
+         (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
+         (sqlite3-last-id connection)))
+
+
+
 (test* "Checking dbi-tables"
-       '("tbl1")
+       '("tbl1" "tbl2")
        (dbi-tables connection))
 
 (test* "(dbi-open? connection)"

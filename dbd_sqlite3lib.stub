@@ -26,6 +26,9 @@
 (define-cproc sqlite3-errmsg (db::<sqlite3-handle>)
   (call <const-cstring> "sqlite3_errmsg"))
 
+(define-cproc sqlite3-last-insert-rowid (db::<sqlite3-handle>)
+  (call <ulong> "sqlite3_last_insert_rowid"))
+
 (define-cproc sqlite3-statement-p (obj)
   (expr <boolean> "Sqlite3StmtP(obj_scm)"))
 

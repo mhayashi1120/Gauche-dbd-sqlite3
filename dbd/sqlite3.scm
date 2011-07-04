@@ -10,7 +10,7 @@
    <sqlite3-result-set>
    sqlite3-error-message
    sqlite3-table-columns
-
+   sqlite3-last-id
    ))
 (select-module dbd.sqlite3)
 
@@ -29,6 +29,9 @@
 (define (sqlite3-error-message conn)
   (sqlite3-errmsg (slot-ref conn '%handle)))
 
+(define (sqlite3-last-id conn)
+  (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
+
 ;;;
 ;;; DBI interfaces
 ;;;
@@ -37,7 +40,8 @@
   ())
 
 (define-class <sqlite3-connection> (<dbi-connection>)
-  ((%handle :init-value #f)))
+  ((%handle :init-value #f)
+   (%filename :init-value #f :init-keyword :filename)))
 
 (define-class <sqlite3-result-set> (<relation> <sequence>)
   ((%db :init-keyword :db)
@@ -56,7 +60,8 @@
           (match option-alist
                  (((maybe-db . #t) . rest) maybe-db)
                  (else (assoc-ref option-alist "db" #f))))
-         (conn (make <sqlite3-connection>)))
+         (conn (make <sqlite3-connection>
+                 :filename db-name)))
     (guard (e (else (error <sqlite3-error> :message "SQLite3 open failed")))
       (slot-set! conn '%handle (sqlite3-open db-name)))
     conn))
