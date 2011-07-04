@@ -150,8 +150,6 @@
          (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
          (sqlite3-last-id connection)))
 
-
-
 (test* "Checking dbi-tables"
        '("tbl1" "tbl2")
        (dbi-tables connection))
