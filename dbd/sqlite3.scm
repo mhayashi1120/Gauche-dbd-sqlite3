@@ -144,10 +144,11 @@
                      (set! cache (cdr cache))))
                   (else
                    item))))
-         (end? (lambda () (and (null? cache)
-                               (begin
-                                 (set! item (step r))
-                                 (not item))))))
+         (end? (lambda () 
+                 (and (null? cache)
+                      (begin
+                        (set! item (step r))
+                        (not item))))))
     (proc end? next)))
 
 (define (step rset)
