@@ -10,7 +10,7 @@
    <sqlite3-result-set>
    sqlite3-error-message
    sqlite3-table-columns
-
+   sqlite3-last-id
    ))
 (select-module dbd.sqlite3)
 
@@ -26,6 +26,12 @@
      (dbi-get-value row 1))
    (dbi-do conn "PRAGMA table_info(?)" '() table)))
 
+(define (sqlite3-error-message conn)
+  (sqlite3-errmsg (slot-ref conn '%handle)))
+
+(define (sqlite3-last-id conn)
+  (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
+
 ;;;
 ;;; DBI interfaces
 ;;;
@@ -34,7 +40,8 @@
   ())
 
 (define-class <sqlite3-connection> (<dbi-connection>)
-  ((%handle :init-value #f)))
+  ((%handle :init-value #f)
+   (%filename :init-value #f :init-keyword :filename)))
 
 (define-class <sqlite3-result-set> (<relation> <sequence>)
   ((%db :init-keyword :db)
@@ -53,7 +60,8 @@
           (match option-alist
                  (((maybe-db . #t) . rest) maybe-db)
                  (else (assoc-ref option-alist "db" #f))))
-         (conn (make <sqlite3-connection>)))
+         (conn (make <sqlite3-connection>
+                 :filename db-name)))
     (guard (e (else (error <sqlite3-error> :message "SQLite3 open failed")))
       (slot-set! conn '%handle (sqlite3-open db-name)))
     conn))
@@ -67,8 +75,8 @@
             (let ((res (prepare handle query-string)))
               (unless res
                 (errorf
-                 <sqlite3-error> :error-message (sqlite3-error-message handle)
-                 "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
+                 <sqlite3-error> :error-message (sqlite3-errmsg handle)
+                 "SQLite3 query failed: ~a" (sqlite3-errmsg handle)))
               res))))
     (step result)
     result))
@@ -149,7 +157,7 @@
          (sqlite3-statement-step handle)))
 
   (guard (e (else (error <sqlite3-error> 
-                         :message (sqlite3-error-message (slot-ref rset '%db)))))
+                         :message (sqlite3-errmsg (slot-ref rset '%db)))))
     (if-let1 row (get (slot-ref rset '%handle))
       (begin
         (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
