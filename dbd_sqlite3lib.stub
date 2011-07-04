@@ -23,7 +23,7 @@
 (define-cproc sqlite3-escape-string (value::<string>)
   (call "Sqlite3EscapeString"))
 
-(define-cproc sqlite3-error-message (db::<sqlite3-handle>)
+(define-cproc sqlite3-errmsg (db::<sqlite3-handle>)
   (call <const-cstring> "sqlite3_errmsg"))
 
 (define-cproc sqlite3-statement-p (obj)

@@ -26,6 +26,9 @@
      (dbi-get-value row 1))
    (dbi-do conn "PRAGMA table_info(?)" '() table)))
 
+(define (sqlite3-error-message conn)
+  (sqlite3-errmsg (slot-ref conn '%handle)))
+
 ;;;
 ;;; DBI interfaces
 ;;;
@@ -67,8 +70,8 @@
             (let ((res (prepare handle query-string)))
               (unless res
                 (errorf
-                 <sqlite3-error> :error-message (sqlite3-error-message handle)
-                 "SQLite3 query failed: ~a" (sqlite3-error-message handle)))
+                 <sqlite3-error> :error-message (sqlite3-errmsg handle)
+                 "SQLite3 query failed: ~a" (sqlite3-errmsg handle)))
               res))))
     (step result)
     result))
@@ -149,7 +152,7 @@
          (sqlite3-statement-step handle)))
 
   (guard (e (else (error <sqlite3-error> 
-                         :message (sqlite3-error-message (slot-ref rset '%db)))))
+                         :message (sqlite3-errmsg (slot-ref rset '%db)))))
     (if-let1 row (get (slot-ref rset '%handle))
       (begin
         (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
