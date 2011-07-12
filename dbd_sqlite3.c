@@ -25,9 +25,9 @@ static void stmt_check(ScmSqlite3Stmt * stmt)
 
 ScmSqlite3Stmt * Sqlite3StmtMake()
 {
+    /* TODO malloc? */
     ScmSqlite3Stmt * stmt = malloc(sizeof(ScmSqlite3Stmt));
 
-    stmt->tail = NULL;
     stmt->core = NULL;
 
     stmt->executed = 0;
@@ -52,7 +52,6 @@ int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
 	return 0;
     }
 
-    stmt->tail = NULL;
     stmt->core = vm;
 
     stmt->executed = 1;
