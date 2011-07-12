@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <gauche/bignum.h>
 
-ScmClass * ScmSqlite3Class;
-ScmClass * ScmSqlite3StmtClass;
+ScmClass *Sqlite3Class;
+ScmClass *Sqlite3StmtClass;
 static ScmObj sym_closed;
 
 extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
@@ -238,10 +238,12 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     mod = SCM_MODULE(SCM_FIND_MODULE("dbd.sqlite3", TRUE));
 
     /* Register classes */
-    ScmSqlite3Class = 
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>", NULL, Sqlite3_finalize, 0);
-    ScmSqlite3StmtClass = 
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>", NULL, Sqlite3Stmt_finalize, 0);
+    Sqlite3Class = 
+	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>", 
+				    NULL, Sqlite3_finalize, 0);
+    Sqlite3StmtClass = 
+	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>", 
+				    NULL, Sqlite3Stmt_finalize, 0);
 
     /* Get handle of the symbol 'closed? */
     sym_closed = SCM_INTERN("closed?");

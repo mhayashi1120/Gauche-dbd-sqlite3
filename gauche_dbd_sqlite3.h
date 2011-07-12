@@ -8,21 +8,21 @@
 
 #include <sqlite3.h>
 
-extern ScmClass * ScmSqlite3Class;
+extern ScmClass *Sqlite3Class;
 typedef ScmForeignPointer ScmSqlite3;
 
-#define SCM_SQLITE3_P(obj)	(SCM_XTYPEP(obj, ScmSqlite3Class))
+#define SCM_SQLITE3_P(obj)	(SCM_XTYPEP(obj, Sqlite3Class))
 #define SQLITE3_HANDLE_UNBOX(obj) SCM_FOREIGN_POINTER_REF(sqlite3*, obj)
 #define SQLITE3_HANDLE_BOX(handle) \
-	Scm_MakeForeignPointer(ScmSqlite3Class, handle)
+	Scm_MakeForeignPointer(Sqlite3Class, handle)
 
-extern ScmClass * ScmSqlite3StmtClass;
+extern ScmClass *Sqlite3StmtClass;
 typedef ScmForeignPointer ScmSqliteStmt3;
 
-#define SCM_SQLITE3_STMT_P(obj)	(SCM_XTYPEP(obj, ScmSqlite3StmtClass))
+#define SCM_SQLITE3_STMT_P(obj)	(SCM_XTYPEP(obj, Sqlite3StmtClass))
 #define SQLITE3_STMT_HANDLE_UNBOX(obj) SCM_FOREIGN_POINTER_REF(scm_sqlite3_stmt *, obj)
 #define SQLITE3_STMT_HANDLE_BOX(handle) \
-	Scm_MakeForeignPointer(ScmSqlite3StmtClass, handle)
+	Scm_MakeForeignPointer(Sqlite3StmtClass, handle)
 
 typedef struct scm_sqlite3_stmt_rec {
 	sqlite3_stmt *core;
