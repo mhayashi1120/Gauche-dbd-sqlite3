@@ -74,22 +74,17 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	result = Scm_MakeVector(num, SCM_FALSE);
 
 	for (i = 0; i < num; i++) {
-	    switch (sqlite3_column_type(stmt->core, i))
-	    {
-	    case SQLITE_INTEGER:
-	    {
+	    switch (sqlite3_column_type(stmt->core, i)) {
+	    case SQLITE_INTEGER: {
 		long long int v = sqlite3_column_int64(stmt->core, i);
 
-		if (v > LONG_MAX)
-		{
+		if (v > LONG_MAX) {
 		    u_long values[2];
 
 		    values[0] = v & 0xffffffffL;
 		    values[1] = v >> SCM_WORD_BITS;
 		    value = Scm_MakeBignumFromUIArray(1, values, values[1] ? 2 : 1);
-		}
-		else if (v < LONG_MIN)
-		{
+		} else if (v < LONG_MIN) {
 		    u_long values[2];
 
 		    v = -v;
@@ -97,9 +92,7 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 		    values[0] = v & 0xffffffffL;
 		    values[1] = v >> SCM_WORD_BITS;
 		    value = Scm_MakeBignumFromUIArray(-1, values, values[1] ? 2 : 1);
-		}
-		else
-		{
+		} else {
 		    value = Scm_MakeInteger(v);
 		}
 		break;
@@ -112,8 +105,8 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 		break;
 	    case SQLITE_BLOB:
 		value = Scm_MakeU8VectorFromArray(
-			sqlite3_column_bytes(stmt->core, i),
-			(unsigned char *)sqlite3_column_blob(stmt->core, i));
+		    sqlite3_column_bytes(stmt->core, i),
+		    (unsigned char *)sqlite3_column_blob(stmt->core, i));
 		break;
 	    case SQLITE_NULL:
 		value = SCM_FALSE;
@@ -125,10 +118,10 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	    Scm_VectorSet(SCM_VECTOR(result), i, value);
 	}
 	return SCM_OBJ(result);
-    }else if (rc == SQLITE_DONE) {
+    } else if (rc == SQLITE_DONE) {
 	stmt->terminated = 1;
 	return SCM_FALSE;
-    }else{
+    } else {
 	/* http://www.sqlite.org/c3ref/c_abort.html */
 	Scm_Error("sqlite3_step failed: %d", rc);
     }
