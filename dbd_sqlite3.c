@@ -46,8 +46,7 @@ int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
     db = SQLITE3_HANDLE_UNBOX(db_obj);
 
     if (sqlite3_prepare(db, Scm_GetStringConst(sql),
-			SCM_STRING_SIZE(sql), &vm, 0) != SQLITE_OK)
-    {
+			SCM_STRING_SIZE(sql), &vm, 0) != SQLITE_OK) {
 	/* Failed */
 	return 0;
     }
