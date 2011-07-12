@@ -17,15 +17,15 @@ static void db_check(ScmObj obj)
     if (Sqlite3ClosedP(obj)) Scm_Error("<sqlite3-handle> already closed");
 }
 
-static void stmt_check(scm_sqlite3_stmt * stmt)
+static void stmt_check(ScmSqlite3Stmt * stmt)
 {
     if (! stmt->executed) Scm_Error("<sqlite3-statement-handle> not executed yet");
     if (stmt->terminated) Scm_Error("<sqlite3-statement-handle> already closed");
 }
 
-scm_sqlite3_stmt * Sqlite3StmtMake()
+ScmSqlite3Stmt * Sqlite3StmtMake()
 {
-    scm_sqlite3_stmt * stmt = malloc(sizeof(scm_sqlite3_stmt));
+    ScmSqlite3Stmt * stmt = malloc(sizeof(ScmSqlite3Stmt));
 
     stmt->tail = NULL;
     stmt->core = NULL;
@@ -36,7 +36,7 @@ scm_sqlite3_stmt * Sqlite3StmtMake()
     return stmt;
 }
 
-int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
+int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
 {
     sqlite3_stmt * vm = NULL;
     sqlite3 * db;
@@ -60,7 +60,7 @@ int Sqlite3Prepare(ScmObj db_obj, scm_sqlite3_stmt * stmt, ScmString * sql)
     return 1;
 }
 
-ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
+ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 {
     unsigned int i, num;
     int rc;
@@ -135,7 +135,7 @@ ScmObj Sqlite3StmtStep(scm_sqlite3_stmt * stmt)
     }
 }
 
-ScmObj Sqlite3StmtColumnNames(scm_sqlite3_stmt * stmt)
+ScmObj Sqlite3StmtColumnNames(ScmSqlite3Stmt * stmt)
 {
     int i, num;
     ScmObj value;
@@ -151,7 +151,7 @@ ScmObj Sqlite3StmtColumnNames(scm_sqlite3_stmt * stmt)
     return SCM_OBJ(Scm_Reverse(result));
 }
 
-int Sqlite3StmtClosedP(scm_sqlite3_stmt * stmt)
+int Sqlite3StmtClosedP(ScmSqlite3Stmt * stmt)
 {
     return ((stmt->core == NULL) ? 1 : 0);
 }
@@ -176,7 +176,7 @@ ScmObj Sqlite3EscapeString(ScmString * value)
     return result;
 }
 
-int Sqlite3StmtFinish(scm_sqlite3_stmt * stmt)
+int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
 {
     if (stmt->core) {
 	sqlite3_finalize(stmt->core);
@@ -204,7 +204,7 @@ int Sqlite3Close(ScmObj obj)
     }
 }
 
-int Sqlite3StmtEndP(scm_sqlite3_stmt * stmt)
+int Sqlite3StmtEndP(ScmSqlite3Stmt * stmt)
 {
     return ((stmt->terminated) ? 1 : 0);
 }
@@ -262,6 +262,6 @@ static void Sqlite3Stmt_finalize(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
-    scm_sqlite3_stmt * stmt = SQLITE3_STMT_HANDLE_UNBOX(obj);
+    ScmSqlite3Stmt * stmt = SQLITE3_STMT_HANDLE_UNBOX(obj);
     if (stmt->core != NULL) Sqlite3StmtFinish(stmt);
 }
