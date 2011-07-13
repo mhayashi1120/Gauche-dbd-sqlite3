@@ -208,6 +208,8 @@
 		(dbi-open? connection))
 
 (test-end)
-(sys-unlink "test.db")
 
+(sys-unlink "test.db")
+(and (file-exists? "test.db-journal")
+     (sys-unlink "test.db-journal"))
 
