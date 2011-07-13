@@ -8,3 +8,6 @@ imitate sqlite3-ruby
 
 * Check any cursor have already been open when executing query.
 
+* mutex
+sqlite3_db_mutex
+

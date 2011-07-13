@@ -40,7 +40,6 @@ int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
 {
     sqlite3_stmt * vm = NULL;
     sqlite3 * db;
-    int status;
 
     db_check(db_obj);
     db = SQLITE3_HANDLE_UNBOX(db_obj);

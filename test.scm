@@ -18,10 +18,11 @@
    identity
    (dbi-do connection sql)))
 
-(test* "dbi-connect" '<sqlite3-connection>
+(test* "dbi-connect" 
+       <sqlite3-connection>
        (let1 c (dbi-connect "dbi:sqlite3:test.db")
          (set! connection c)
-         (class-name (class-of c))))
+         (class-of c)))
 
 (test* "Creating test table"
        #t
@@ -54,14 +55,37 @@
 (test* "Checking field names"
        '("id" "name" "image" "rate")
        (let1 rset (dbi-do connection "SELECT * FROM tbl1;")
-         ;;TODO fix after auto close
          (begin0
            (slot-ref rset 'field-names)
+           ;; Must close result if rset is pending query.
+           ;; See the http://www.sqlite.org/lang_transaction.html ROLLBACK section.
            (dbi-close rset))))
 
 (test* "Checking current inserted values"
        '(#(1 "name 1" #u8(1 1) 0.8) #(2 "name 2" #u8(2 2) 0.7) #(3 #f #f #f))
        (select-rows "SELECT id, name, image, rate FROM tbl1 ORDER BY id ASC;"))
+
+(let ((rset (dbi-do connection "SELECT id FROM tbl1 ORDER BY id ASC")))
+  (test* "Checking result when quit on the way"
+         '(#(1) #(2))
+         (call-with-iterator rset
+           (lambda (end? next)
+             (let loop ((count 0)
+                        (res '()))
+               (cond
+                ((or (end?)
+                     (> count 1))
+                 (reverse! res))
+                (else
+                 (loop (+ count 1)
+                       (cons (next) res))))))))
+
+  (test* "Checking result 1"
+         '(#(1) #(2) #(3))
+         (map identity rset))
+  (test* "Checking result 2"
+         '(#(1) #(2) #(3))
+         (map identity rset)))
 
 (test* "Checking transaction commit"
        '(#(101) #(102))
@@ -82,6 +106,23 @@
                ;; non existent table
                (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))
          (select-rows "SELECT id FROM tbl1 WHERE id IN (103, 104)")))
+
+;; See the http://www.sqlite.org/lang_transaction.html ROLLBACK section.
+(test* "Checking transaction unable rollback"
+       '(#(201))
+       (begin
+         (dbi-do connection "SELECT 1 AS FOO;")
+         (guard (e (else (print (string-join
+                                 (map 
+                                  (cut condition-ref <> 'message)
+                                  (slot-ref e '%conditions))
+                                 ", "))))
+           (call-with-transaction connection
+             (lambda (tran)
+               (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+               ;; non existent table
+               (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+         (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))
 
 (test* "Checking full bit number insertion"
        '(#(-1))

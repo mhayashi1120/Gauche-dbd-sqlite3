@@ -4,6 +4,7 @@
   (use util.list)
   (use util.match)
   (use gauche.collection)
+  (use util.stream)
   (export
    <sqlite3-driver>
    <sqlite3-connection>
@@ -46,8 +47,9 @@
 (define-class <sqlite3-result-set> (<relation> <sequence>)
   ((%db :init-keyword :db)
    (%handle :init-keyword :handle)
-   (field-names :init-keyword :field-names)
-   (rows :init-form '())))
+   (%stream :init-value #f)
+   (%cache :init-form '())
+   (field-names :init-keyword :field-names)))
 
 (define-condition-type <sqlite3-error> <dbi-error> #f
   (error-code))
@@ -68,17 +70,24 @@
 
 (define-method dbi-execute-using-connection
   ((c <sqlite3-connection>) (q <dbi-query>) params)
-  (let* ((handle (slot-ref c '%handle))
-         (query-string (apply (slot-ref q 'prepared) params))
-         (result 
-          (guard (e (else (error <sqlite3-error> :message (slot-ref e 'message))))
-            (let ((res (prepare handle query-string)))
-              (unless res
-                (errorf
-                 <sqlite3-error> :error-message (sqlite3-errmsg handle)
-                 "SQLite3 query failed: ~a" (sqlite3-errmsg handle)))
-              res))))
-    (step result)
+
+  (define (prepare db query)
+    (let ((stmt (make-sqlite-statement)))
+      (unless (guard (e (else 
+                         (error <sqlite3-error> 
+                                :message (slot-ref e 'message))))
+                (sqlite3-prepare db stmt query))
+        (errorf
+         <sqlite3-error> :error-message (sqlite3-errmsg db)
+         "SQLite3 query failed: ~a" (sqlite3-errmsg db)))
+      (make <sqlite3-result-set>
+        :db db
+        :handle stmt
+        :field-names (sqlite3-statement-column-names stmt))))
+
+  (let* ((query-string (apply (slot-ref q 'prepared) params))
+         (result (prepare (slot-ref c '%handle) query-string)))
+    (slot-set! result '%stream (statement-next result))
     result))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
@@ -96,15 +105,6 @@
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
   (sqlite3-statement-finish (slot-ref result-set '%handle)))
-
-(define (prepare db query)
-  (let ((stmt (make-sqlite-statement)))
-    (if (sqlite3-prepare db stmt query)
-      (make <sqlite3-result-set>
-        :db db
-        :handle stmt
-        :field-names (sqlite3-statement-column-names stmt))
-      #f)))
 
 ;;;
 ;;; Relation interfaces
@@ -134,36 +134,27 @@
 ;;;
 
 (define-method call-with-iterator ((r <sqlite3-result-set>) proc . option)
-  (let* ((cache (reverse (slot-ref r 'rows)))
-         (item #f)
-         (next (lambda () 
-                 (cond 
-                  ((pair? cache)
-                   (begin0
-                     (car cache)
-                     (set! cache (cdr cache))))
-                  (else
-                   item))))
-         (end? (lambda () 
-                 (and (null? cache)
-                      (begin
-                        (set! item (step r))
-                        (not item))))))
+  (let* ((s (slot-ref r '%stream))
+         (next (^ () (begin0
+                       (stream-car s)
+                       (set! s (stream-cdr s)))))
+         (end? (^ () (stream-null? s))))
     (proc end? next)))
 
-(define (step rset)
+(define (statement-next rset)
 
-  (define (get handle)
-    (and (not (sqlite3-statement-end? handle))
-         (sqlite3-statement-step handle)))
+  (define (next)
+    (guard (e (else (error <sqlite3-error> 
+                           :message (sqlite3-errmsg (slot-ref rset '%db)))))
+      (sqlite3-statement-step (slot-ref rset '%handle))))
 
-  (guard (e (else (error <sqlite3-error> 
-                         :message (sqlite3-errmsg (slot-ref rset '%db)))))
-    (if-let1 row (get (slot-ref rset '%handle))
-      (begin
-        (slot-set! rset 'rows (cons row (slot-ref rset 'rows)))
-        row)
-      #f)))
+  (cond
+   ((sqlite3-statement-end? (slot-ref rset '%handle))
+    stream-null)
+   ((next) =>
+    (^n (stream-delay (cons n (statement-next rset)))))
+   (else
+    stream-null)))
 
 ;;;
 ;;;TODO dbi extensions
