@@ -111,6 +111,7 @@
 (test* "Checking transaction unable rollback"
        '(#(201))
        (begin
+         ;; Open pending query
          (dbi-do connection "SELECT 1 AS FOO;")
          (guard (e (else (print (string-join
                                  (map 
@@ -143,19 +144,19 @@
          (select-rows "SELECT id FROM tbl1 WHERE id = 2147483648")))
 
 (test* "Checking exceed long number insertion 3"
-       '(#(4294967295))
+       '(#(#xffffffff))
        (begin
          (dbi-do connection "INSERT INTO tbl1 (id) VALUES(4294967295);")
          (select-rows "SELECT id FROM tbl1 WHERE id = 4294967295")))
 
 (test* "Checking exceed long number insertion 4"
-       '(#(4294967296))
+       '(#(#x100000000))
        (begin
          (dbi-do connection "INSERT INTO tbl1 (id) VALUES(4294967296);")
          (select-rows "SELECT id FROM tbl1 WHERE id = 4294967296")))
 
 (test* "Checking exceed long number insertion 5"
-       '(#(4294967297))
+       '(#(#x100000001))
        (begin
          (dbi-do connection "INSERT INTO tbl1 (id) VALUES(4294967297);")
          (select-rows "SELECT id FROM tbl1 WHERE id = 4294967297")))
