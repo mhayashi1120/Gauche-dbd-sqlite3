@@ -120,11 +120,17 @@
        ((find-index (cut string=? <> column) columns)
         => (cut vector-ref row <>))
        ((pair? maybe-default) (car maybe-default))
-       (else (error "invalud column name:" column))))))
+       (else 
+        (error "<sqlite3-result-set>: invalud column name:" column))))))
 
-;;TODO
 (define-method relation-modifier ((r <sqlite3-result-set>))
-  )
+  (let1 columns (ref r 'field-names)
+    (lambda (row column val)
+      (cond
+       ((find-index (cut string=? <> column) columns)
+        => (cut vector-set! row <> val))
+       (else 
+        (error "<sqlite3-result-set>: invalid column:" column))))))
 
 (define-method relation-rows ((r <sqlite3-result-set>))
   (map identity r))
