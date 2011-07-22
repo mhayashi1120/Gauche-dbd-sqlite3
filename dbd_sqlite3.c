@@ -133,7 +133,6 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	/* TODO  */
 	/* multiple SELECT statement */
 	while (stmt->tail && *stmt->tail) {
-	    /* stmt->tail = ""; */
 	    sqlite3_stmt * vm = NULL;
 	    const char * s;
 	    const char * tail;
