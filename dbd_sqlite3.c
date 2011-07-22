@@ -40,17 +40,20 @@ int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
 {
     sqlite3_stmt * vm = NULL;
     sqlite3 * db;
+    const char * s;
+    const char * tail;
 
     db_check(db_obj);
     db = SQLITE3_HANDLE_UNBOX(db_obj);
+    s = Scm_GetStringConst(sql);
 
-    if (sqlite3_prepare(db, Scm_GetStringConst(sql),
-			SCM_STRING_SIZE(sql), &vm, 0) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db, s, -1, &vm, &tail) != SQLITE_OK) {
 	/* Failed */
 	return 0;
     }
 
     stmt->core = vm;
+    stmt->tail = tail;
 
     stmt->executed = 1;
     stmt->terminated = 0;
