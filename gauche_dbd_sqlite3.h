@@ -25,6 +25,7 @@ typedef ScmForeignPointer ScmSqliteStmt3;
 	Scm_MakeForeignPointer(Sqlite3StmtClass, handle)
 
 typedef struct ScmSqlite3StmtRec {
+	sqlite3 *db;
 	sqlite3_stmt *core;
 	const char * tail;
 	int executed;

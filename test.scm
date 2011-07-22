@@ -192,6 +192,29 @@
          (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
          (sqlite3-last-id connection)))
 
+(test* "Checking compound INSERT statements"
+       '(#(301) #(302) #(303))
+       (begin
+         (dbi-do connection "INSERT INTO tbl1 (id) VALUES (301); INSERT INTO tbl1 (id) VALUES (302);INSERT INTO tbl1 (id) VALUES (303)")
+         (select-rows "SELECT id FROM tbl1 WHERE id IN (301, 302, 303)")))
+
+(test* "Checking compound statements getting last select"
+       '(#(401) #(402))
+       (select-rows "INSERT INTO tbl1 (id) VALUES (401); INSERT INTO tbl1 (id) VALUES (402);SELECT id FROM tbl1 WHERE id IN (401, 402)"))
+
+(test* "Checking compound statements getting 1st select"
+       '(#(401) #(402))
+       (select-rows "SELECT id FROM tbl1 WHERE id IN (401, 402); INSERT INTO tbl1 (id) VALUES (403);"))
+
+(test* "Checking compound statements before"
+       '(#(403))
+       (select-rows "SELECT id FROM tbl1 WHERE id IN (403);"))
+
+;; TODO
+(test* "Checking cannot handle multiple SELECT statements"
+       '(#(403) #(301 #f) #(302 #f))
+       (select-rows "SELECT id FROM tbl1 WHERE id IN (403); SELECT id, name FROM tbl1 WHERE id IN (301, 302)"))
+
 (test* "Checking dbi-tables"
        '("tbl1" "tbl2")
        (dbi-tables connection))
