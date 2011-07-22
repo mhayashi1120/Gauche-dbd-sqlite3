@@ -23,19 +23,6 @@ static void stmt_check(ScmSqlite3Stmt * stmt)
     if (stmt->terminated) Scm_Error("<sqlite3-statement-handle> already closed");
 }
 
-ScmSqlite3Stmt * Sqlite3StmtMake()
-{
-    /* TODO malloc? */
-    ScmSqlite3Stmt * stmt = malloc(sizeof(ScmSqlite3Stmt));
-
-    stmt->core = NULL;
-
-    stmt->executed = 0;
-    stmt->terminated = 0;
-
-    return stmt;
-}
-
 static int PrepareStatement(sqlite3 * db, const char * sql, ScmSqlite3Stmt * stmt)
 {
     sqlite3_stmt * vm = NULL;
@@ -48,27 +35,6 @@ static int PrepareStatement(sqlite3 * db, const char * sql, ScmSqlite3Stmt * stm
 
     stmt->core = vm;
     stmt->tail = tail;
-
-    return 1;
-}
-
-int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
-{
-    sqlite3 * db;
-    const char * s;
-
-    db_check(db_obj);
-    db = SQLITE3_HANDLE_UNBOX(db_obj);
-    s = Scm_GetStringConst(sql);
-
-    if (!PrepareStatement(db, s, stmt)) {
-	return 0;
-    }
-
-    stmt->db = db;
-
-    stmt->executed = 1;
-    stmt->terminated = 0;
 
     return 1;
 }
@@ -127,6 +93,40 @@ static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
     }
 
     return SCM_OBJ(result);
+}
+
+ScmSqlite3Stmt * Sqlite3StmtMake()
+{
+    /* TODO malloc? */
+    ScmSqlite3Stmt * stmt = malloc(sizeof(ScmSqlite3Stmt));
+
+    stmt->core = NULL;
+
+    stmt->executed = 0;
+    stmt->terminated = 0;
+
+    return stmt;
+}
+
+int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
+{
+    sqlite3 * db;
+    const char * s;
+
+    db_check(db_obj);
+    db = SQLITE3_HANDLE_UNBOX(db_obj);
+    s = Scm_GetStringConst(sql);
+
+    if (!PrepareStatement(db, s, stmt)) {
+	return 0;
+    }
+
+    stmt->db = db;
+
+    stmt->executed = 1;
+    stmt->terminated = 0;
+
+    return 1;
 }
 
 ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
