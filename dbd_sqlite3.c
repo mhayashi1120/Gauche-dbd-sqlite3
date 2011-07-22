@@ -220,10 +220,6 @@ ScmObj Sqlite3EscapeString(ScmString * value)
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
 {
     if (stmt->core) {
-	if (*stmt->tail) {
-	    sqlite3_free(stmt->tail);
-	    stmt->tail = NULL;
-	}
 	sqlite3_finalize(stmt->core);
 	stmt->core = NULL;
 	return 1;
