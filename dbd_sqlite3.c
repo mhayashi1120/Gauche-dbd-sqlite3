@@ -36,28 +36,40 @@ ScmSqlite3Stmt * Sqlite3StmtMake()
     return stmt;
 }
 
-int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
+static int PrepareStatement(sqlite3 * db, const char * sql, ScmSqlite3Stmt * stmt)
 {
     sqlite3_stmt * vm = NULL;
+    const char * tail;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &vm, &tail) != SQLITE_OK) {
+	/* Failed */
+	return 0;
+    }
+
+    stmt->core = vm;
+    stmt->tail = tail;
+
+    return 1;
+}
+
+int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
+{
     sqlite3 * db;
     const char * s;
-    const char * tail;
 
     db_check(db_obj);
     db = SQLITE3_HANDLE_UNBOX(db_obj);
     s = Scm_GetStringConst(sql);
 
-    if (sqlite3_prepare_v2(db, s, -1, &vm, &tail) != SQLITE_OK) {
-	/* Failed */
+    if (!PrepareStatement(db, s, stmt)) {
 	return 0;
     }
 
     stmt->db = db;
-    stmt->core = vm;
-    stmt->tail = tail;
 
     stmt->executed = 1;
     stmt->terminated = 0;
+
     return 1;
 }
 
@@ -133,24 +145,11 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	/* TODO  */
 	/* multiple SELECT statement */
 	while (stmt->tail && *stmt->tail) {
-	    sqlite3_stmt * vm = NULL;
-	    const char * s;
-	    const char * tail;
-	    sqlite3 * db;
 
-	    db = stmt->db;
-	    s = stmt->tail;
-
-	    if (sqlite3_prepare_v2(db, s, -1, &vm, &tail) != SQLITE_OK) {
+	    if (!PrepareStatement(stmt->db, stmt->tail,  stmt)) {
 	    	/* Failed */
 	    	Scm_Error("sqlite3_prepare_v2 failed while handling compound statement.");
 	    }
-
-	    stmt->tail = tail;
-
-	    /* TODO  */
-	    /* Sqlite3_finalize(stmt->core); */
-	    stmt->core = vm;
 
 	    do {
 
