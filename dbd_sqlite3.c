@@ -146,7 +146,7 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	/* multiple SELECT statement */
 	while (stmt->tail && *stmt->tail) {
 
-	    if (!PrepareStatement(stmt->db, stmt->tail,  stmt)) {
+	    if (!PrepareStatement(stmt->db, stmt->tail, stmt)) {
 	    	/* Failed */
 	    	Scm_Error("sqlite3_prepare_v2 failed while handling compound statement.");
 	    }
