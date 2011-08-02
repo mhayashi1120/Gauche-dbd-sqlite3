@@ -3,7 +3,7 @@
   (use gauche.uvector)
   (use util.list)
   (use util.match)
-  (use gauche.collection)
+  (use gauche.sequence)
   (use util.stream)
   (export
    <sqlite3-driver>
