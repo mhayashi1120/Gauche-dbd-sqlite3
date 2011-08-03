@@ -215,6 +215,11 @@
        '(#(403) #(301 #f) #(302 #f))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403); SELECT id, name FROM tbl1 WHERE id IN (301, 302)"))
 
+;;TODO
+(test* "Checking VACUUM"
+       #f
+       (dbi-do connection "VACUUM"))
+
 (test* "Checking dbi-tables"
        '("tbl1" "tbl2")
        (dbi-tables connection))
