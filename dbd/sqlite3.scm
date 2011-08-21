@@ -78,8 +78,9 @@
                                 :message (slot-ref e 'message))))
                 (sqlite3-prepare db stmt query))
         (errorf
-         <sqlite3-error> :error-message (sqlite3-errmsg db)
-         "SQLite3 query failed: ~a" (sqlite3-errmsg db)))
+         (let1 msg (sqlite3-errmsg db)
+           <sqlite3-error> :error-message msg
+           "SQLite3 prepare failed: ~a" msg)))
       (make <sqlite3-result-set>
         :db db
         :handle stmt
@@ -87,6 +88,7 @@
 
   (let* ((query-string (apply (slot-ref q 'prepared) params))
          (result (prepare (slot-ref c '%handle) query-string)))
+    ;; execute first step of this statement
     (slot-set! result '%stream (statement-next result))
     result))
 
@@ -150,8 +152,11 @@
 (define (statement-next rset)
 
   (define (next)
-    (guard (e (else (error <sqlite3-error> 
-                           :message (sqlite3-errmsg (slot-ref rset '%db)))))
+    (guard (e (else 
+               (errorf
+                (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
+                  <sqlite3-error> :error-message msg
+                  "SQLite3 step failed: ~a" msg))))
       (sqlite3-statement-step (slot-ref rset '%handle))))
 
   (cond
