@@ -1,12 +1,13 @@
 [Requirements]
 
-- Gauche 0.8.7 or later (http://www.practical-scheme.net/gauche/)
-- SQLite 3.3 or later (http://www.sqlite.org/)
+- Gauche 0.9.2 or later (http://www.practical-scheme.net/gauche/)
+- SQLite 3.7.3 or later (http://www.sqlite.org/)
 
 [Building]
 
-  % ./configure
-  % make
+  $ ./DIST gen
+  $ ./configure
+  $ make
   % make install
 
 
