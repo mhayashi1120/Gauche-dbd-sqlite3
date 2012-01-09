@@ -211,13 +211,13 @@
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403);"))
 
 ;; TODO
-(test* "Checking cannot handle multiple SELECT statements"
+(test* "Checking multiple SELECT statements"
        '(#(403) #(301 #f) #(302 #f))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403); SELECT id, name FROM tbl1 WHERE id IN (301, 302)"))
 
-;;TODO
-(test* "Checking VACUUM"
-       #f
+;; FIXME
+(test* "Checking VACUUM is not working."
+       (test-error <error>)
        (dbi-do connection "VACUUM"))
 
 (test* "Checking dbi-tables"
