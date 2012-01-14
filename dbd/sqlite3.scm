@@ -189,16 +189,22 @@
     (guard (e (else 
                (guard (e2 (else 
                            (raise (make-compound-condition e e2))))
-                      (dbi-rollback tran)
-                      (raise e))))
+                 (dbi-rollback tran)
+                 (raise e))))
       (begin0
         (proc tran)
         (dbi-commit tran)))))
 
+(define (with-transaction conn proc . flags)
+  (apply 
+   call-with-transaction conn
+    (^t (proc))
+    flags))
+
 (define-method dbi-tables ((conn <dbi-connection>))
   '())
 
-(export-if-defined call-with-transaction dbi-tables)
+(export-if-defined call-with-transaction with-transaction dbi-tables)
 
 
 ;;;
