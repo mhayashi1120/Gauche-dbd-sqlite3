@@ -9,7 +9,7 @@ ScmClass *Sqlite3StmtClass;
 static ScmObj sym_closed;
 
 extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
-static void Sqlite3_finalize(ScmObj obj);
+static void Sqlite3Db_finalize(ScmObj obj);
 static void Sqlite3Stmt_finalize(ScmObj obj);
 
 static void db_check(ScmObj obj)
@@ -281,7 +281,7 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     /* Register classes */
     Sqlite3Class =
 	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>",
-				    NULL, Sqlite3_finalize, 0);
+				    NULL, Sqlite3Db_finalize, 0);
     Sqlite3StmtClass =
 	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>",
 				    NULL, Sqlite3Stmt_finalize, 0);
@@ -293,7 +293,7 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     Scm_Init_dbd_sqlite3lib(mod);
 }
 
-static void Sqlite3_finalize(ScmObj obj)
+static void Sqlite3Db_finalize(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
     Sqlite3Close(obj);
