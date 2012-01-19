@@ -75,7 +75,7 @@
     (let ((stmt (make-sqlite-statement)))
       (unless (guard (e (else 
                          (error <sqlite3-error> 
-                                :message (slot-ref e 'message))))
+                                :message (condition-ref e 'message))))
                 (sqlite3-prepare db stmt query))
         (errorf
          (let1 msg (sqlite3-errmsg db)
@@ -102,7 +102,8 @@
   (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
-  (guard (e (else (error <sqlite3-error> :message (slot-ref e 'message))))
+  (guard (e (else (error <sqlite3-error> 
+                         :message (condition-ref e 'message))))
     (sqlite3-close (slot-ref c '%handle))))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))

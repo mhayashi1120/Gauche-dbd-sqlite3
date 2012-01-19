@@ -154,7 +154,7 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	    do {
 
 	    	rc = sqlite3_step(stmt->core);
-		
+
 	    	if (rc == SQLITE_ROW)
 	    	    return MakeRowVector(stmt);
 
@@ -219,13 +219,13 @@ ScmObj Sqlite3EscapeString(ScmString * value)
 
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
 {
-    if (stmt->core) {
-	sqlite3_finalize(stmt->core);
-	stmt->core = NULL;
-	return 1;
-    } else {
+    if (stmt->core == NULL) {
 	return 0;
     }
+
+    sqlite3_finalize(stmt->core);
+    stmt->core = NULL;
+    return 1;
 }
 
 int Sqlite3Close(ScmObj obj)
@@ -236,13 +236,13 @@ int Sqlite3Close(ScmObj obj)
 
     if (Sqlite3ClosedP(obj)) {
 	return 0;
-    } else {
-	Scm_ForeignPointerAttrSet(SCM_FOREIGN_POINTER(obj), sym_closed, SCM_TRUE);
-
-	db = SQLITE3_HANDLE_UNBOX(obj);
-	sqlite3_close(db);
-	return 1;
     }
+
+    Scm_ForeignPointerAttrSet(SCM_FOREIGN_POINTER(obj), sym_closed, SCM_TRUE);
+
+    db = SQLITE3_HANDLE_UNBOX(obj);
+    sqlite3_close(db);
+    return 1;
 }
 
 int Sqlite3StmtEndP(ScmSqlite3Stmt * stmt)
@@ -279,11 +279,11 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     mod = SCM_MODULE(SCM_FIND_MODULE("dbd.sqlite3", TRUE));
 
     /* Register classes */
-    Sqlite3Class = 
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>", 
+    Sqlite3Class =
+	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>",
 				    NULL, Sqlite3_finalize, 0);
-    Sqlite3StmtClass = 
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>", 
+    Sqlite3StmtClass =
+	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>",
 				    NULL, Sqlite3Stmt_finalize, 0);
 
     /* Get handle of the symbol 'closed? */
