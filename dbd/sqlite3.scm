@@ -22,7 +22,7 @@
 ;;;
 
 (define (sqlite3-table-columns conn table)
-  (do-select conn "PRAGMA table_info(?)" 
+  (do-select conn "PRAGMA table_info(?)"
              (^r (dbi-get-value r 1)) table))
 
 (define (sqlite3-error-message conn)
@@ -71,8 +71,8 @@
 
   (define (prepare db query)
     (let ((stmt (make-sqlite-statement)))
-      (unless (guard (e (else 
-                         (error <sqlite3-error> 
+      (unless (guard (e (else
+                         (error <sqlite3-error>
                                 :message (condition-ref e 'message))))
                 (sqlite3-prepare db stmt query))
         (errorf
@@ -100,7 +100,7 @@
   (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
-  (guard (e (else (error <sqlite3-error> 
+  (guard (e (else (error <sqlite3-error>
                          :message (condition-ref e 'message))))
     (sqlite3-close (slot-ref c '%handle))))
 
@@ -121,7 +121,7 @@
        ((find-index (cut string=? <> column) columns)
         => (cut vector-ref row <>))
        ((pair? maybe-default) (car maybe-default))
-       (else 
+       (else
         (error "<sqlite3-result-set>: invalud column name:" column))))))
 
 (define-method relation-modifier ((r <sqlite3-result-set>))
@@ -130,7 +130,7 @@
       (cond
        ((find-index (cut string=? <> column) columns)
         => (cut vector-set! row <> val))
-       (else 
+       (else
         (error "<sqlite3-result-set>: invalid column:" column))))))
 
 (define-method relation-rows ((r <sqlite3-result-set>))
@@ -151,7 +151,7 @@
 (define (statement-next rset)
 
   (define (next)
-    (guard (e (else 
+    (guard (e (else
                (errorf
                 (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
                   <sqlite3-error> :error-message msg
@@ -185,8 +185,8 @@
 ;; proc accept a <dbi-transaction>.
 (define (call-with-transaction conn proc . flags)
   (let1 tran (apply dbi-begin-transaction conn flags)
-    (guard (e (else 
-               (guard (e2 (else 
+    (guard (e (else
+               (guard (e2 (else
                            (raise (make-compound-condition e e2))))
                  (dbi-rollback tran)
                  (raise e))))
@@ -215,7 +215,7 @@
 (define-method dbi-begin-transaction ((conn <sqlite3-connection>) . args)
   (rlet1 tran (make <sqlite3-transaction> :connection conn)
     (do-one-time conn "BEGIN TRANSACTION")))
-    
+
 
 (define-method dbi-commit ((tran <sqlite3-transaction>) . args)
   (do-one-time (slot-ref tran 'connection)
