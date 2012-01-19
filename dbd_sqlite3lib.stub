@@ -12,13 +12,13 @@
   (expr <sqlite3-statement> "Sqlite3StmtMake()"))
 
 (define-cproc sqlite3-close (db::<sqlite3-handle>)
-  (expr <boolean> "Sqlite3Close(db_scm)"))
+  (expr <boolean> "Sqlite3DbClose(db_scm)"))
 
 (define-cproc sqlite3-prepare (db::<sqlite3-handle> stmt::<sqlite3-statement> sql::<string>)
-  (expr <boolean> "Sqlite3Prepare(db_scm, stmt, sql)"))
+  (expr <boolean> "Sqlite3PrepareStmt(db_scm, stmt, sql)"))
 
 (define-cproc sqlite3-open (arg::<string>)
-  (expr <sqlite3-handle> "Sqlite3Open(arg)"))
+  (expr <sqlite3-handle> "Sqlite3OpenDb(arg)"))
 
 (define-cproc sqlite3-escape-string (value::<string>)
   (call "Sqlite3EscapeString"))
@@ -30,19 +30,19 @@
   (call <ulong> "sqlite3_last_insert_rowid"))
 
 (define-cproc sqlite3-statement-p (obj)
-  (expr <boolean> "Sqlite3StmtP(obj_scm)"))
+  (expr <boolean> "Sqlite3IsStmt(obj_scm)"))
 
 (define-cproc sqlite3-closed-p (db::<sqlite3-handle>)
-  (expr <boolean> "Sqlite3ClosedP(db_scm)"))
+  (expr <boolean> "Sqlite3DbIsClosed(db_scm)"))
 
 (define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>)
-  (expr <boolean> "Sqlite3StmtEndP(stmt)"))
+  (expr <boolean> "Sqlite3StmtIsEnd(stmt)"))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (call "Sqlite3StmtStep"))
 
 (define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>)
-  (expr <boolean> "Sqlite3StmtClosedP(stmt)"))
+  (expr <boolean> "Sqlite3StmtIsClosed(stmt)"))
 
 (define-cproc sqlite3-statement-finish (stmt::<sqlite3-statement>)
   (expr <boolean> "Sqlite3StmtFinish(stmt)"))

@@ -34,23 +34,23 @@ typedef struct ScmSqlite3StmtRec {
 
 extern void Scm_Init_sqlite3lib(ScmModule *module);
 
-extern int Sqlite3Close(ScmObj obj);
-extern int Sqlite3ClosedP(ScmObj obj);
+extern int Sqlite3DbClose(ScmObj obj);
+extern int Sqlite3DbIsClosed(ScmObj obj);
 
 
-extern sqlite3 * Sqlite3Open(ScmString * path);
+extern sqlite3 * Sqlite3OpenDb(ScmString * path);
 
 extern ScmSqlite3Stmt * Sqlite3StmtMake();
 
-extern int Sqlite3StmtP(ScmObj obj);
+extern int Sqlite3IsStmt(ScmObj obj);
 extern ScmObj Sqlite3EscapeString(ScmString * value);
-extern int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql);
+extern int Sqlite3PrepareStmt(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql);
 
 extern ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * scm_stmt);
 extern int Sqlite3StmtFinish(ScmSqlite3Stmt * scm_stmt);
 extern ScmObj Sqlite3StmtColumnNames(ScmSqlite3Stmt * scm_stmt);
-extern int Sqlite3StmtEndP(ScmSqlite3Stmt * stmt);
-extern int Sqlite3StmtClosedP(ScmSqlite3Stmt * stmt);
+extern int Sqlite3StmtIsEnd(ScmSqlite3Stmt * stmt);
+extern int Sqlite3StmtIsClosed(ScmSqlite3Stmt * stmt);
 
 /* Epilogue */
 SCM_DECL_END

@@ -14,7 +14,7 @@ static void Sqlite3Stmt_finalize(ScmObj obj);
 
 static void db_check(ScmObj obj)
 {
-    if (Sqlite3ClosedP(obj)) Scm_Error("<sqlite3-handle> already closed");
+    if (Sqlite3DbIsClosed(obj)) Scm_Error("<sqlite3-handle> already closed");
 }
 
 static void stmt_check(ScmSqlite3Stmt * stmt)
@@ -108,7 +108,7 @@ ScmSqlite3Stmt * Sqlite3StmtMake()
     return stmt;
 }
 
-int Sqlite3Prepare(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
+int Sqlite3PrepareStmt(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
 {
     sqlite3 * db;
     const char * s;
@@ -192,12 +192,12 @@ ScmObj Sqlite3StmtColumnNames(ScmSqlite3Stmt * stmt)
     return SCM_OBJ(Scm_Reverse(result));
 }
 
-int Sqlite3StmtClosedP(ScmSqlite3Stmt * stmt)
+int Sqlite3StmtIsClosed(ScmSqlite3Stmt * stmt)
 {
     return ((stmt->core == NULL) ? 1 : 0);
 }
 
-sqlite3 * Sqlite3Open(ScmString * path)
+sqlite3 * Sqlite3OpenDb(ScmString * path)
 {
     sqlite3 * db;
 
@@ -228,13 +228,13 @@ int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
     return 1;
 }
 
-int Sqlite3Close(ScmObj obj)
+int Sqlite3DbClose(ScmObj obj)
 {
     sqlite3 * db;
 
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
-    if (Sqlite3ClosedP(obj)) {
+    if (Sqlite3DbIsClosed(obj)) {
 	return 0;
     }
 
@@ -245,17 +245,17 @@ int Sqlite3Close(ScmObj obj)
     return 1;
 }
 
-int Sqlite3StmtEndP(ScmSqlite3Stmt * stmt)
+int Sqlite3StmtIsEnd(ScmSqlite3Stmt * stmt)
 {
     return ((stmt->terminated) ? 1 : 0);
 }
 
-int Sqlite3StmtP(ScmObj obj)
+int Sqlite3IsStmt(ScmObj obj)
 {
     return (SCM_SQLITE3_STMT_P(obj) ? 1 : 0);
 }
 
-int Sqlite3ClosedP(ScmObj obj)
+int Sqlite3DbIsClosed(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
@@ -296,7 +296,7 @@ ScmObj Scm_Init_dbd_sqlite3(void)
 static void Sqlite3Db_finalize(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
-    Sqlite3Close(obj);
+    Sqlite3DbClose(obj);
 }
 
 static void Sqlite3Stmt_finalize(ScmObj obj)
