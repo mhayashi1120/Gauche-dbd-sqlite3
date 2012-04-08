@@ -7,22 +7,22 @@ VPATH       = $(srcdir)
 
 # These may be overridden by make invocators
 DESTDIR  =
-OPTFLAGS = @OPTFLAGS@
-CC       = @CC@
 LIBS     = @LIBS@
 CFLAGS   = @CFLAGS@ 
 LDFLAGS  = @LDFLAGS@
-INSTALL_TYPE = @INSTALL_TYPE@
 
 # Set by configure
 GOSH     = @GOSH@
 GAUCHE_CONFIG = @GAUCHE_CONFIG@
 GAUCHE_PACKAGE = @GAUCHE_PACKAGE@
+INSTALL  = @GAUCHE_INSTALL@
+
 OBJEXT   = @OBJEXT@
 DSOEXT   = @SOEXT@
 
-INSTALL  = @GAUCHE_INSTALL@
 
+# Module-specific stuff
+PACKAGE   = gauche-dbd-sqlite3
 MODULE   = dbd_sqlite3
 
 ARCHFILES = $(MODULE).$(DSOEXT)
@@ -30,22 +30,21 @@ SCMFILES  = dbd/sqlite3.scm
 HEADERS   = 
 
 TARGET    = $(ARCHFILES)
-OBJS      = dbd_sqlite3.$(OBJEXT)         \
-	        dbd_sqlite3lib.$(OBJEXT)
-GENERATED = dbd_sqlite3lib.c $(MODULE)_head.c $(MODULE)_tail.c
+GENERATED =
 CONFIG_GENERATED = Makefile config.cache config.log config.status \
-		   configure.lineno autom4te*.cache gauche-dbd-sqlite3.gpd
+		   configure.lineno autom4te*.cache $(PACKAGE).gpd
 
 sqlite3_SRCS = dbd_sqlite3.c dbd_sqlite3lib.stub
 
-HEADER_INSTALL_DIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)incdir`
-SCM_INSTALL_DIR     = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)libdir`
-ARCH_INSTALL_DIR    = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)archdir`
+GAUCHE_PKGINCDIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --pkgincdir`
+GAUCHE_PKGLIBDIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --pkglibdir`
+GAUCHE_PKGARCHDIR = $(DESTDIR)`$(GAUCHE_CONFIG) --pkgarchdir`
 
 all : $(TARGET)
 
 $(MODULE).$(DSOEXT): $(sqlite3_SRCS)
 	$(GAUCHE_PACKAGE) compile --verbose \
+      --cflags="$(CFLAGS)" --ldflags="$(LDFLAGS)" \
 	  --libs="$(LIBS)" $(MODULE) $(sqlite3_SRCS)
 
 check : all
@@ -53,13 +52,20 @@ check : all
 	$(GOSH) -I. test.scm > test.log
 
 install : all
-	$(INSTALL) -m 444 -T $(HEADER_INSTALL_DIR) $(HEADERS)
-	$(INSTALL) -m 444 -T $(SCM_INSTALL_DIR) $(SCMFILES) 
-	$(INSTALL) -m 555 -T $(ARCH_INSTALL_DIR) $(ARCHFILES)
-	$(INSTALL) -m 444 -T $(SCM_INSTALL_DIR)/.packages gauche-dbd-sqlite3.gpd
+	$(INSTALL) -m 444 -T $(GAUCHE_PKGINCDIR) $(HEADERS)
+	$(INSTALL) -m 444 -T $(GAUCHE_PKGINCDIR) $(SCMFILES) 
+	$(INSTALL) -m 555 -T $(GAUCHE_PKGARCHDIR) $(ARCHFILES)
+	$(INSTALL) -m 444 -T $(GAUCHE_PKGINCDIR)/.packages $(PACKAGE).gpd
+
+uninstall :
+	$(INSTALL) -U $(GAUCHE_PKGINCDIR) $(HEADERS)
+	$(INSTALL) -U $(GAUCHE_PKGLIBDIR) $(SCMFILES) 
+	$(INSTALL) -U $(GAUCHE_PKGARCHDIR) $(ARCHFILES)
+	$(INSTALL) -U $(GAUCHE_PKGLIBDIR)/.packages $(PACKAGE).gpd
 
 clean :
-	rm -rf core $(TARGET) $(OBJS) $(GENERATED) *~ test.log so_locations
+	$(GAUCHE_PACKAGE) compile --clean $(MODULE) $(sqlite3_SRCS)
+	rm -rf $(TARGET) $(GENERATED) *~ test.log so_locations
 
 distclean : clean
 	rm -rf $(CONFIG_GENERATED)
