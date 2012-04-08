@@ -179,7 +179,7 @@
          (dbi-do connection "INSERT INTO tbl1 (id) VALUES(-9223372036854775808);")
          (select-rows "SELECT id FROM tbl1 WHERE id = -9223372036854775808")))
 
-(test* "Checking minus max number insertion"
+(test* "Checking max number insertion"
        '(#(#x7fffffffffffffff))
        (begin
          (dbi-do connection "INSERT INTO tbl1 (id) VALUES(9223372036854775807);")

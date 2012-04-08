@@ -17,6 +17,7 @@ INSTALL_TYPE = @INSTALL_TYPE@
 # Set by configure
 GOSH     = @GOSH@
 GAUCHE_CONFIG = @GAUCHE_CONFIG@
+GAUCHE_PACKAGE = @GAUCHE_PACKAGE@
 OBJEXT   = @OBJEXT@
 DSOEXT   = @SOEXT@
 
@@ -29,13 +30,13 @@ SCMFILES  = dbd/sqlite3.scm
 HEADERS   = 
 
 TARGET    = $(ARCHFILES)
-OBJS      = $(MODULE)_head.$(OBJEXT) \
-            dbd_sqlite3.$(OBJEXT)         \
-	    dbd_sqlite3lib.$(OBJEXT)      \
-            $(MODULE)_tail.$(OBJEXT)
+OBJS      = dbd_sqlite3.$(OBJEXT)         \
+	        dbd_sqlite3lib.$(OBJEXT)
 GENERATED = dbd_sqlite3lib.c $(MODULE)_head.c $(MODULE)_tail.c
 CONFIG_GENERATED = Makefile config.cache config.log config.status \
 		   configure.lineno autom4te*.cache gauche-dbd-sqlite3.gpd
+
+sqlite3_SRCS = dbd_sqlite3.c dbd_sqlite3lib.stub
 
 HEADER_INSTALL_DIR  = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)incdir`
 SCM_INSTALL_DIR     = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)libdir`
@@ -43,21 +44,9 @@ ARCH_INSTALL_DIR    = $(DESTDIR)`$(GAUCHE_CONFIG) --$(INSTALL_TYPE)archdir`
 
 all : $(TARGET)
 
-.SUFFIXES: .o .stub
-
-.c.o:
-	$(CC) $(CFLAGS) -c $< -o $@
-
-.stub.c:
-	$(GOSH) genstub $<
-
-dbd_sqlite3lib.c : dbd_sqlite3lib.stub
-
-$(MODULE).$(DSOEXT): $(OBJS)
-	$(CC) -Wl,-rpath -Wl,`gauche-config --sysarchdir` $(LDFLAGS) $(MODULE).$(DSOEXT) $(OBJS) $(LIBS)
-
-$(MODULE)_head.c $(MODULE)_tail.c :
-	$(GAUCHE_CONFIG) --fixup-extension $(MODULE)
+$(MODULE).$(DSOEXT): $(sqlite3_SRCS)
+	$(GAUCHE_PACKAGE) compile --verbose \
+	  --libs="$(LIBS)" $(MODULE) $(sqlite3_SRCS)
 
 check : all
 	@rm -f test.log
