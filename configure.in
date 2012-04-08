@@ -27,6 +27,9 @@ dnl same programs as gosh.
 AC_GAUCHE_CC
 AC_GAUCHE_FLAGS
 
+dnl Set gauche dependent paths.
+AC_GAUCHE_SET_PATH
+
 dnl Check for other programs.
 dnl Add your macro calls to check existence of programs, if you have any.
 
@@ -39,5 +42,8 @@ AC_GAUCHE_FIX_LIBS
 
 dnl Output
 AC_GAUCHE_MAKE_GPD
+
+echo $PACKAGE_VERSION > VERSION
+
 AC_OUTPUT(Makefile)
 
