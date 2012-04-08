@@ -225,6 +225,10 @@
   (do-one-time (slot-ref tran 'connection)
                "ROLLBACK TRANSACTION"))
 
+;;;
+;;; dbi extensions TODO  URL
+;;;
+
 (define-method dbi-tables ((conn <sqlite3-connection>))
   (do-select conn
              "SELECT name FROM sqlite_master WHERE type='table'"
