@@ -175,6 +175,19 @@ echo "void *Scm__dataend_$ac_gauche_ext_fixup_name = (void*)&Scm__dataend_$ac_ga
 echo "void *Scm__bssend_$ac_gauche_ext_fixup_name;" >> $1_tail.c
 ])])
 
+dnl AC_GAUCHE_PATH
+dnl   Set Gauche package installed path.
+dnl
+AC_DEFUN([AC_GAUCHE_SET_PATH],
+         [
+GAUCHE_PKGINCDIR=`$GAUCHE_CONFIG --pkgincdir`
+GAUCHE_PKGLIBDIR=`$GAUCHE_CONFIG --pkglibdir`
+GAUCHE_PKGARCHDIR=`$GAUCHE_CONFIG --pkgarchdir`
+AC_SUBST(GAUCHE_PKGINCDIR)
+AC_SUBST(GAUCHE_PKGLIBDIR)
+AC_SUBST(GAUCHE_PKGARCHDIR)
+])
+
 dnl AC_GAUCHE_MAKE_GPD
 dnl   Creates a Gauche package description file.
 dnl
