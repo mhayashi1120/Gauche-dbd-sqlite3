@@ -12,7 +12,7 @@
 # PARTICULAR PURPOSE.
 
 dnl AC_GAUCHE_INIT_EXT
-dnl   Sets some parameters about installed Gauche package. 
+dnl   Sets some parameters about installed Gauche package.
 dnl
 dnl    GAUCHE_CONFIG   - Name of gauche-config script
 dnl    GAUCHE_TOP      - [OBSOLETED] Directory prefix where Gauche is
@@ -163,7 +163,7 @@ dnl   FILE is used as the module's name.
 AC_DEFUN([AC_GAUCHE_EXT_FIXUP],
          [AC_CONFIG_COMMANDS("$1_head_n_tail",
                              [
-if test "X$2" = X; then 
+if test "X$2" = X; then
   ac_gauche_ext_fixup_name=`echo $1 | tr -c "\012A-Za-z0-9" "_"`
 else
   ac_gauche_ext_fixup_name="$2"

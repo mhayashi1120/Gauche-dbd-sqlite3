@@ -9,7 +9,7 @@ VPATH       = $(srcdir)
 # These may be overridden by make invocators
 DESTDIR  =
 LIBS     = @LIBS@
-CFLAGS   = @CFLAGS@ 
+CFLAGS   = @CFLAGS@
 LDFLAGS  = @LDFLAGS@
 
 # Set by configure
@@ -28,7 +28,7 @@ MODULE   = dbd_sqlite3
 
 ARCHFILES = $(MODULE).$(DSOEXT)
 SCMFILES  = dbd/sqlite3.scm
-HEADERS   = 
+HEADERS   =
 
 TARGET    = $(ARCHFILES)
 GENERATED =
@@ -54,13 +54,13 @@ check : all
 
 install : all
 	$(INSTALL) -m 444 -T $(GAUCHE_PKGINCDIR) $(HEADERS)
-	$(INSTALL) -m 444 -T $(GAUCHE_PKGLIBDIR) $(SCMFILES) 
+	$(INSTALL) -m 444 -T $(GAUCHE_PKGLIBDIR) $(SCMFILES)
 	$(INSTALL) -m 555 -T $(GAUCHE_PKGARCHDIR) $(ARCHFILES)
 	$(INSTALL) -m 444 -T $(GAUCHE_PKGLIBDIR)/.packages $(PACKAGE).gpd
 
 uninstall :
 	$(INSTALL) -U $(GAUCHE_PKGINCDIR) $(HEADERS)
-	$(INSTALL) -U $(GAUCHE_PKGLIBDIR) $(SCMFILES) 
+	$(INSTALL) -U $(GAUCHE_PKGLIBDIR) $(SCMFILES)
 	$(INSTALL) -U $(GAUCHE_PKGARCHDIR) $(ARCHFILES)
 	$(INSTALL) -U $(GAUCHE_PKGLIBDIR)/.packages $(PACKAGE).gpd
 

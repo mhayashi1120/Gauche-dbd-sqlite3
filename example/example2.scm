@@ -1,7 +1,7 @@
 (use dbi)
 (use gauche.collection)
 
-(define connection 
+(define connection
   (dbi-connect "dbi:sqlite3:example.db"))
 
 (for-each

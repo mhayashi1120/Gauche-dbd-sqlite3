@@ -18,7 +18,7 @@
    identity
    (dbi-do connection sql)))
 
-(test* "dbi-connect" 
+(test* "dbi-connect"
        <sqlite3-connection>
        (let1 c (dbi-connect "dbi:sqlite3:test.db")
          (set! connection c)
@@ -114,7 +114,7 @@
          ;; Open pending query
          (dbi-do connection "SELECT 1 AS FOO;")
          (guard (e (else (print (string-join
-                                 (map 
+                                 (map
                                   (cut condition-ref <> 'message)
                                   (slot-ref e '%conditions))
                                  ", "))))
