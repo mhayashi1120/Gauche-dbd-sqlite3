@@ -56,13 +56,13 @@
                                     (options <string>)
                                     (option-alist <list>)
                                     . args)
-  (let* ((db-name
+  (let* ([db-name
           (match option-alist
                  (((maybe-db . #t) . rest) maybe-db)
-                 (else (assoc-ref option-alist "db" #f))))
-         (conn (make <sqlite3-connection>
-                 :filename db-name)))
-    (guard (e (else (error <sqlite3-error> :message "SQLite3 open failed")))
+                 (else (assoc-ref option-alist "db" #f)))]
+         [conn (make <sqlite3-connection>
+                 :filename db-name)])
+    (guard (e [else (error <sqlite3-error> :message "SQLite3 open failed")])
       (slot-set! conn '%handle (sqlite3-open db-name)))
     conn))
 
@@ -70,10 +70,10 @@
   ((c <sqlite3-connection>) (q <dbi-query>) params)
 
   (define (prepare db query)
-    (let ((stmt (make-sqlite-statement)))
-      (unless (guard (e (else
+    (let1 stmt (make-sqlite-statement)
+      (unless (guard (e [else
                          (error <sqlite3-error>
-                                :message (condition-ref e 'message))))
+                                :message (condition-ref e 'message))])
                 (sqlite3-prepare db stmt query))
         (errorf
          (let1 msg (sqlite3-errmsg db)
@@ -84,8 +84,8 @@
         :handle stmt
         :field-names (sqlite3-statement-column-names stmt))))
 
-  (let* ((query-string (apply (slot-ref q 'prepared) params))
-         (result (prepare (slot-ref c '%handle) query-string)))
+  (let* ([query-string (apply (slot-ref q 'prepared) params)]
+         [result (prepare (slot-ref c '%handle) query-string)])
     ;; execute first step of this statement
     (slot-set! result '%stream (statement-next result))
     result))
@@ -141,30 +141,30 @@
 ;;;
 
 (define-method call-with-iterator ((r <sqlite3-result-set>) proc . option)
-  (let* ((s (slot-ref r '%stream))
-         (next (^ () (begin0
+  (let* ([s (slot-ref r '%stream)]
+         [next (^ () (begin0
                        (stream-car s)
-                       (set! s (stream-cdr s)))))
-         (end? (^ () (stream-null? s))))
+                       (set! s (stream-cdr s))))]
+         [end? (^ () (stream-null? s))])
     (proc end? next)))
 
 (define (statement-next rset)
 
   (define (next)
-    (guard (e (else
+    (guard (e [else
                (errorf
                 (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
                   <sqlite3-error> :error-message msg
-                  "SQLite3 step failed: ~a" msg))))
+                  "SQLite3 step failed: ~a" msg))])
       (sqlite3-statement-step (slot-ref rset '%handle))))
 
   (cond
-   ((sqlite3-statement-end? (slot-ref rset '%handle))
-    stream-null)
-   ((next) =>
-    (^n (stream-delay (cons n (statement-next rset)))))
-   (else
-    stream-null)))
+   [(sqlite3-statement-end? (slot-ref rset '%handle))
+    stream-null]
+   [(next) =>
+    (^n (stream-delay (cons n (statement-next rset))))]
+   [else
+    stream-null]))
 
 ;;;
 ;;;TODO dbi extensions
@@ -185,11 +185,11 @@
 ;; proc accept a <dbi-transaction>.
 (define (call-with-transaction conn proc . flags)
   (let1 tran (apply dbi-begin-transaction conn flags)
-    (guard (e (else
-               (guard (e2 (else
-                           (raise (make-compound-condition e e2))))
+    (guard (e [else
+               (guard (e2 [else
+                           (raise (make-compound-condition e e2))])
                  (dbi-rollback tran)
-                 (raise e))))
+                 (raise e))])
       (begin0
         (proc tran)
         (dbi-commit tran)))))
