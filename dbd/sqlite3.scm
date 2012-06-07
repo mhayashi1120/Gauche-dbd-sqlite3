@@ -75,8 +75,8 @@
                          (error <sqlite3-error>
                                 :message (condition-ref e 'message))])
                 (sqlite3-prepare db stmt query))
-        (errorf
-         (let1 msg (sqlite3-errmsg db)
+        (let1 msg (sqlite3-errmsg db)
+          (errorf
            <sqlite3-error> :error-message msg
            "SQLite3 prepare failed: ~a" msg)))
       (make <sqlite3-result-set>
@@ -152,8 +152,8 @@
 
   (define (next)
     (guard (e [else
-               (errorf
-                (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
+               (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
+                 (errorf
                   <sqlite3-error> :error-message msg
                   "SQLite3 step failed: ~a" msg))])
       (sqlite3-statement-step (slot-ref rset '%handle))))
