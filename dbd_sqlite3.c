@@ -97,8 +97,7 @@ static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
 
 ScmSqlite3Stmt * Sqlite3StmtMake()
 {
-    /* TODO malloc? no need free? */
-    ScmSqlite3Stmt * stmt = malloc(sizeof(ScmSqlite3Stmt));
+    ScmSqlite3Stmt * stmt = SCM_MALLOC(sizeof(ScmSqlite3Stmt));
 
     stmt->core = NULL;
 
