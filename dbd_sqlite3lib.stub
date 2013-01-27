@@ -8,6 +8,9 @@
 (define-type <sqlite3-statement> "ScmSqlite3Stmt *" "sqlite3-statement-handle"
   "SCM_SQLITE3_STMT_P" "SQLITE3_STMT_HANDLE_UNBOX" "SQLITE3_STMT_HANDLE_BOX")
 
+;; (define-cproc bind-sqlite-parameters (stmt::<sqlite3-statement> params::<list>)
+;;   (expr <sqlite3-statement> "Sqlite3StmtBind(stmt, params)"))
+
 (define-cproc make-sqlite-statement ()
   (expr <sqlite3-statement> "Sqlite3StmtMake()"))
 
