@@ -49,28 +49,9 @@ static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
 
     for (i = 0; i < num; i++) {
 	switch (sqlite3_column_type(stmt->core, i)) {
-	case SQLITE_INTEGER: {
-	    long long int v = sqlite3_column_int64(stmt->core, i);
-
-	    if (v > LONG_MAX) {
-		u_long values[2];
-
-		values[0] = v & 0xffffffffL;
-		values[1] = v >> SCM_WORD_BITS;
-		value = Scm_MakeBignumFromUIArray(1, values, values[1] ? 2 : 1);
-	    } else if (v < LONG_MIN) {
-		u_long values[2];
-
-		v = -v;
-
-		values[0] = v & 0xffffffffL;
-		values[1] = v >> SCM_WORD_BITS;
-		value = Scm_MakeBignumFromUIArray(-1, values, values[1] ? 2 : 1);
-	    } else {
-		value = Scm_MakeInteger(v);
-	    }
+	case SQLITE_INTEGER:
+	    value = Scm_MakeBignumFromSI(sqlite3_column_int64(stmt->core, i));
 	    break;
-	}
 	case SQLITE_FLOAT:
 	    value = Scm_MakeFlonum(sqlite3_column_double(stmt->core, i));
 	    break;
