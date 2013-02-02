@@ -1,6 +1,6 @@
 (declcode (.include  "gauche_dbd_sqlite3.h"))
 
-(define-type <sqlite3-db> "ScmSqlite3Db *" "sqlite3-db"
+(define-type <sqlite3-db> "ScmSqlite3Db *" "sqlite3-db-handle"
   "SCM_SQLITE3_DB_P" "SQLITE3_DB_HANDLE_UNBOX" "SQLITE3_DB_HANDLE_BOX")
 
 (define-type <sqlite3-statement> "ScmSqlite3Stmt *" "sqlite3-statement-handle"
@@ -25,7 +25,7 @@
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
   (when (== (-> db terminated) TRUE)
-  	(Scm_Error "<sqlite3-db> already closed")))
+  	(Scm_Error "<sqlite3-db-handle> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
   :: int :static
