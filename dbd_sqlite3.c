@@ -134,27 +134,6 @@ static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
 /*     /\* Scm_GetDouble(value); *\/ */
 /* } */
 
-int Sqlite3PrepareStmt(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
-{
-    sqlite3 * db;
-    const char * s;
-
-    db_check(db_obj);
-    db = SQLITE3_HANDLE_UNBOX(db_obj);
-    s = Scm_GetStringConst(sql);
-
-    if (!PrepareStatement(db, s, stmt)) {
-	return 0;
-    }
-
-    stmt->db = db;
-
-    stmt->executed = 1;
-    stmt->terminated = 0;
-
-    return 1;
-}
-
 ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 {
     int rc;
@@ -202,6 +181,7 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
     }
 }
 
+// TODO remove after canonicalize finalize
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
 {
     if (stmt->core == NULL) {
@@ -226,18 +206,9 @@ int Sqlite3DbClose(ScmObj obj)
     Scm_ForeignPointerAttrSet(SCM_FOREIGN_POINTER(obj), sym_closed, SCM_TRUE);
 
     db = SQLITE3_HANDLE_UNBOX(obj);
+    // TODO  check return value
     sqlite3_close(db);
     return 1;
-}
-
-int Sqlite3StmtIsEnd(ScmSqlite3Stmt * stmt)
-{
-    return ((stmt->terminated) ? 1 : 0);
-}
-
-int Sqlite3IsStmt(ScmObj obj)
-{
-    return (SCM_SQLITE3_STMT_P(obj) ? 1 : 0);
 }
 
 int Sqlite3DbIsClosed(ScmObj obj)

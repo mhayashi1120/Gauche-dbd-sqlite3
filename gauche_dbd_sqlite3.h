@@ -25,7 +25,7 @@ extern ScmClass *Sqlite3StmtClass;
 typedef struct ScmSqlite3StmtRec {
 	sqlite3 *db;
 	sqlite3_stmt *core;
-	const char * tail;
+	const char *tail;
 	int executed;
 	int terminated;
 } ScmSqlite3Stmt;
@@ -38,14 +38,8 @@ extern int Sqlite3DbIsClosed(ScmObj obj);
 
 extern sqlite3 * Sqlite3OpenDb(ScmString * path);
 
-extern ScmSqlite3Stmt * Sqlite3StmtMake();
-
-extern int Sqlite3IsStmt(ScmObj obj);
-extern int Sqlite3PrepareStmt(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql);
-
 extern ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * scm_stmt);
 extern int Sqlite3StmtFinish(ScmSqlite3Stmt * scm_stmt);
-extern int Sqlite3StmtIsEnd(ScmSqlite3Stmt * stmt);
 
 /* Epilogue */
 SCM_DECL_END
