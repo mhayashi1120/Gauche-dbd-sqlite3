@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <gauche/bignum.h>
 
-ScmClass *Sqlite3Class;
+ScmClass *Sqlite3DbClass;
 ScmClass *Sqlite3StmtClass;
 
 extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
@@ -17,7 +17,7 @@ static void stmt_check(ScmSqlite3Stmt * stmt)
     if (stmt->terminated) Scm_Error("<sqlite3-statement-handle> already closed");
 }
 
-static int PrepareStatement(ScmSqlite3 * db, const char * sql, ScmSqlite3Stmt * stmt)
+static int PrepareStatement(ScmSqlite3Db * db, const char * sql, ScmSqlite3Stmt * stmt)
 {
     sqlite3_stmt * vm = NULL;
     const char * tail;
@@ -190,7 +190,7 @@ int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
     return 1;
 }
 
-int Sqlite3DbClose(ScmSqlite3 * db)
+int Sqlite3DbClose(ScmSqlite3Db * db)
 {
     if (db->core == NULL) {
 	return 0;
@@ -220,7 +220,7 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     mod = SCM_MODULE(SCM_FIND_MODULE("dbd.sqlite3", TRUE));
 
     /* Register classes */
-    Sqlite3Class =
+    Sqlite3DbClass =
 	Scm_MakeForeignPointerClass(mod, "<sqlite3-handle>",
 				    NULL, Sqlite3Db_finalize, 0);
     Sqlite3StmtClass =
@@ -235,7 +235,7 @@ static void Sqlite3Db_finalize(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
-    ScmSqlite3 * db = SQLITE3_HANDLE_UNBOX(obj);
+    ScmSqlite3Db * db = SQLITE3_DB_HANDLE_UNBOX(obj);
     Sqlite3DbClose(db);
 }
 
