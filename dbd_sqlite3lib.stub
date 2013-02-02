@@ -14,10 +14,10 @@
 
 (define-cproc make-sqlite-statement () :: <sqlite3-statement>
   (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
-	(set! (-> stmt core) NULL)
-	(set! (-> stmt executed) FALSE)
-	(set! (-> stmt terminated) FALSE)
-	(result stmt)))
+    (set! (-> stmt core) NULL)
+    (set! (-> stmt executed) FALSE)
+    (set! (-> stmt terminated) FALSE)
+    (result stmt)))
 
 (define-cproc sqlite3-close (db::<sqlite3-db>) :: <boolean>
   (expr <boolean> "Sqlite3DbClose(db)"))
@@ -25,7 +25,7 @@
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
   (when (== (-> db terminated) TRUE)
-  	(Scm_Error "<sqlite3-db-handle> already closed")))
+    (Scm_Error "<sqlite3-db-handle> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
   :: int :static
@@ -39,26 +39,26 @@
 
 (define-cproc sqlite3-prepare (db::<sqlite3-db> stmt::<sqlite3-statement> sql::<string>) :: <boolean>
   (let* ([query::(const char*) (Scm_GetStringConst sql)])
-	(check-db db)
-	(cond
-	 [(== (prepare-statement db query stmt) 0)
-	  (result FALSE)]
-	 [else
-	  (set! (-> stmt db) db)
-	  (set! (-> stmt executed) TRUE)
-	  (set! (-> stmt terminated) FALSE)
-	  (result TRUE)])))
+    (check-db db)
+    (cond
+     [(== (prepare-statement db query stmt) 0)
+      (result FALSE)]
+     [else
+      (set! (-> stmt db) db)
+      (set! (-> stmt executed) TRUE)
+      (set! (-> stmt terminated) FALSE)
+      (result TRUE)])))
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
   (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))])
-	(unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
-	  (Scm_Error "OPEN ERROR"))
-	(set! (-> db terminated) FALSE)
-	(result db)))
+    (unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
+      (Scm_Error "OPEN ERROR"))
+    (set! (-> db terminated) FALSE)
+    (result db)))
 
 (define-cproc sqlite3-escape-string (value::<string>)
   (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]
-		  [res::ScmObj (SCM_MAKE_STR_COPYING tmp)])
+          [res::ScmObj (SCM_MAKE_STR_COPYING tmp)])
 
     (sqlite3_free tmp)
     (result res)))
@@ -83,25 +83,25 @@
 
 (define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>) :: <boolean>
   (let* ([handle::sqlite3_stmt* (-> stmt core)])
-	(result (== handle NULL))))
+    (result (== handle NULL))))
 
 (define-cproc sqlite3-statement-finish (stmt::<sqlite3-statement>) :: <boolean>
   (cond
    [(== (-> stmt core) NULL)
-	(result FALSE)]
+    (result FALSE)]
    [else
-	(sqlite3_finalize (-> stmt core))
-	(set! (-> stmt core) NULL)
-	(result TRUE)]))
+    (sqlite3_finalize (-> stmt core))
+    (set! (-> stmt core) NULL)
+    (result TRUE)]))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
   (let* ([num::int (sqlite3_column_count (-> stmt core))]
-		 [i::int]
-		 [res '()])
-	(for ((set! i 0) (< i num) (pre++ i))
-		 (let* ([val (SCM_MAKE_STR_COPYING (sqlite3_column_name (-> stmt core) i))])
-		   (set! res (Scm_Cons val res))))
-	(set! res (Scm_Reverse res))
-	(result res)))
+         [i::int]
+         [res '()])
+    (for ((set! i 0) (< i num) (pre++ i))
+         (let* ([val (SCM_MAKE_STR_COPYING (sqlite3_column_name (-> stmt core) i))])
+           (set! res (Scm_Cons val res))))
+    (set! res (Scm_Reverse res))
+    (result res)))
 
 
