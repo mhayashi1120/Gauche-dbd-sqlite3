@@ -1,6 +1,6 @@
 (declcode (.include  "gauche_dbd_sqlite3.h"))
 
-(define-type <sqlite3-handle> "ScmSqlite3Db *" "sqlite3-handle"
+(define-type <sqlite3-db> "ScmSqlite3Db *" "sqlite3-db"
   "SCM_SQLITE3_DB_P" "SQLITE3_DB_HANDLE_UNBOX" "SQLITE3_DB_HANDLE_BOX")
 
 (define-type <sqlite3-statement> "ScmSqlite3Stmt *" "sqlite3-statement-handle"
@@ -19,13 +19,13 @@
 	(set! (-> stmt terminated) FALSE)
 	(result stmt)))
 
-(define-cproc sqlite3-close (db::<sqlite3-handle>) :: <boolean>
+(define-cproc sqlite3-close (db::<sqlite3-db>) :: <boolean>
   (expr <boolean> "Sqlite3DbClose(db)"))
 
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
   (when (== (-> db terminated) TRUE)
-  	(Scm_Error "<sqlite3-handle> already closed")))
+  	(Scm_Error "<sqlite3-db> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
   :: int :static
@@ -37,7 +37,7 @@
     (set! (-> stmt tail) tail)
     (return TRUE)))
 
-(define-cproc sqlite3-prepare (db::<sqlite3-handle> stmt::<sqlite3-statement> sql::<string>) :: <boolean>
+(define-cproc sqlite3-prepare (db::<sqlite3-db> stmt::<sqlite3-statement> sql::<string>) :: <boolean>
   (let* ([query::(const char*) (Scm_GetStringConst sql)])
 	(check-db db)
 	(cond
@@ -49,7 +49,7 @@
 	  (set! (-> stmt terminated) FALSE)
 	  (result TRUE)])))
 
-(define-cproc sqlite3-open (path::<string>) :: <sqlite3-handle>
+(define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
   (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))])
 	(unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
 	  (Scm_Error "OPEN ERROR"))
@@ -63,16 +63,16 @@
     (sqlite3_free tmp)
     (result res)))
 
-(define-cproc sqlite3-errmsg (db::<sqlite3-handle>) :: <const-cstring>
+(define-cproc sqlite3-errmsg (db::<sqlite3-db>) :: <const-cstring>
   (result (sqlite3_errmsg (-> db core))))
 
-(define-cproc sqlite3-last-insert-rowid (db::<sqlite3-handle>) :: <ulong>
+(define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
   (sqlite3_last_insert_rowid (-> db core)))
 
 (define-cproc sqlite3-statement-p (obj) :: <boolean>
   (result (SCM_SQLITE3_STMT_P obj)))
 
-(define-cproc sqlite3-closed-p (db::<sqlite3-handle>) :: <boolean>
+(define-cproc sqlite3-closed-p (db::<sqlite3-db>) :: <boolean>
   (result (-> db terminated)))
 
 (define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>) :: <boolean>
