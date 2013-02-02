@@ -6,16 +6,10 @@
 
 ScmClass *Sqlite3Class;
 ScmClass *Sqlite3StmtClass;
-static ScmObj sym_closed;
 
 extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
 static void Sqlite3Db_finalize(ScmObj obj);
 static void Sqlite3Stmt_finalize(ScmObj obj);
-
-static void db_check(ScmObj obj)
-{
-    if (Sqlite3DbIsClosed(obj)) Scm_Error("<sqlite3-handle> already closed");
-}
 
 static void stmt_check(ScmSqlite3Stmt * stmt)
 {
@@ -23,12 +17,12 @@ static void stmt_check(ScmSqlite3Stmt * stmt)
     if (stmt->terminated) Scm_Error("<sqlite3-statement-handle> already closed");
 }
 
-static int PrepareStatement(sqlite3 * db, const char * sql, ScmSqlite3Stmt * stmt)
+static int PrepareStatement(ScmSqlite3 * db, const char * sql, ScmSqlite3Stmt * stmt)
 {
     sqlite3_stmt * vm = NULL;
     const char * tail;
 
-    if (sqlite3_prepare_v2(db, sql, -1, &vm, &tail) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db->core, sql, -1, &vm, &tail) != SQLITE_OK) {
 	/* Failed */
 	return 0;
     }
@@ -181,43 +175,34 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
     }
 }
 
-// TODO remove after canonicalize finalize
+// TODO remove after canonicalize finalize if can..
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
 {
     if (stmt->core == NULL) {
 	return 0;
     }
 
+    /* TODO check return value */
     sqlite3_finalize(stmt->core);
+
     stmt->core = NULL;
+
     return 1;
 }
 
-int Sqlite3DbClose(ScmObj obj)
+int Sqlite3DbClose(ScmSqlite3 * db)
 {
-    sqlite3 * db;
-
-    SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
-
-    if (Sqlite3DbIsClosed(obj)) {
+    if (db->core == NULL) {
 	return 0;
     }
 
-    Scm_ForeignPointerAttrSet(SCM_FOREIGN_POINTER(obj), sym_closed, SCM_TRUE);
-
-    db = SQLITE3_HANDLE_UNBOX(obj);
     // TODO  check return value
-    sqlite3_close(db);
+    sqlite3_close(db->core);
+
+    db->core = NULL;
+    db->terminated = 1;
+
     return 1;
-}
-
-int Sqlite3DbIsClosed(ScmObj obj)
-{
-    SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
-
-    return SCM_TRUEP(
-	Scm_ForeignPointerAttrGet(SCM_FOREIGN_POINTER(obj),
-				  sym_closed, SCM_FALSE));
 }
 
 /*
@@ -242,9 +227,6 @@ ScmObj Scm_Init_dbd_sqlite3(void)
 	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>",
 				    NULL, Sqlite3Stmt_finalize, 0);
 
-    /* Get handle of the symbol 'closed? */
-    sym_closed = SCM_INTERN("closed?");
-
     /* Register stub-generated procedures */
     Scm_Init_dbd_sqlite3lib(mod);
 }
@@ -252,7 +234,9 @@ ScmObj Scm_Init_dbd_sqlite3(void)
 static void Sqlite3Db_finalize(ScmObj obj)
 {
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
-    Sqlite3DbClose(obj);
+
+    ScmSqlite3 * db = SQLITE3_HANDLE_UNBOX(obj);
+    Sqlite3DbClose(db);
 }
 
 static void Sqlite3Stmt_finalize(ScmObj obj)
@@ -260,5 +244,5 @@ static void Sqlite3Stmt_finalize(ScmObj obj)
     SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
 
     ScmSqlite3Stmt * stmt = SQLITE3_STMT_HANDLE_UNBOX(obj);
-    if (stmt->core != NULL) Sqlite3StmtFinish(stmt);
+    Sqlite3StmtFinish(stmt);
 }

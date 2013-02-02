@@ -224,15 +224,15 @@
        '("tbl1" "tbl2")
        (dbi-tables connection))
 
-(test* "(dbi-open? connection)"
+(test* "Checking still open connection"
 		#t
 		(dbi-open? connection))
 
-(test* "(dbi-close connection)"
+(test* "Checking closing connection"
 		#t
 		(dbi-close connection))
 
-(test* "(dbi-open? connection)"
+(test* "Check connection was closed"
 		#f
 		(dbi-open? connection))
 
