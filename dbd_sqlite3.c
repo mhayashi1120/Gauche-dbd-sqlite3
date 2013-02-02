@@ -268,17 +268,6 @@ sqlite3 * Sqlite3OpenDb(ScmString * path)
     return db;
 }
 
-ScmObj Sqlite3EscapeString(ScmString * value)
-{
-    char * tmp;
-    ScmObj result;
-
-    tmp = sqlite3_mprintf("%q", Scm_GetStringConst(value));
-    result = SCM_MAKE_STR_COPYING(tmp);
-    sqlite3_free(tmp);
-    return result;
-}
-
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
 {
     if (stmt->core == NULL) {
