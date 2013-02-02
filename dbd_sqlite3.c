@@ -219,34 +219,9 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
     }
 }
 
-ScmObj Sqlite3StmtColumnNames(ScmSqlite3Stmt * stmt)
-{
-    int i, num;
-    ScmObj value;
-    ScmObj result;
-
-    num = sqlite3_column_count(stmt->core);
-    result = Scm_MakeList(0, SCM_FALSE);
-
-    for (i = 0; i < num; i++) {
-	value = SCM_MAKE_STR_COPYING(sqlite3_column_name(stmt->core, i));
-	result = Scm_Cons(value, result);
-    }
-    return SCM_OBJ(Scm_Reverse(result));
-}
-
 int Sqlite3StmtIsClosed(ScmSqlite3Stmt * stmt)
 {
     return ((stmt->core == NULL) ? 1 : 0);
-}
-
-sqlite3 * Sqlite3OpenDb(ScmString * path)
-{
-    sqlite3 * db;
-
-    if (sqlite3_open(Scm_GetString(path) , &db) != SQLITE_OK) Scm_Error("OPEN ERROR");
-
-    return db;
 }
 
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)

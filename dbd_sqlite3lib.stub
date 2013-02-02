@@ -20,8 +20,11 @@
 (define-cproc sqlite3-prepare (db::<sqlite3-handle> stmt::<sqlite3-statement> sql::<string>)
   (expr <boolean> "Sqlite3PrepareStmt(db_scm, stmt, sql)"))
 
-(define-cproc sqlite3-open (arg::<string>)
-  (expr <sqlite3-handle> "Sqlite3OpenDb(arg)"))
+(define-cproc sqlite3-open (path::<string>) :: <sqlite3-handle>
+  (let* ([db::sqlite3*])
+	(unless (== (sqlite3_open (Scm_GetString path) (& db)) SQLITE_OK)
+	  (Scm_Error "OPEN ERROR"))
+	(result db)))
 
 (define-cproc sqlite3-escape-string (value::<string>)
   (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]
@@ -48,12 +51,21 @@
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (call "Sqlite3StmtStep"))
 
-(define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>)
-  (expr <boolean> "Sqlite3StmtIsClosed(stmt)"))
+(define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>) :: <boolean>
+  (let* ([handle::sqlite3_stmt* (-> stmt core)])
+	(result (== handle NULL))))
 
 (define-cproc sqlite3-statement-finish (stmt::<sqlite3-statement>)
   (expr <boolean> "Sqlite3StmtFinish(stmt)"))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
-  (call "Sqlite3StmtColumnNames"))
+  (let* ([num::int (sqlite3_column_count (-> stmt core))]
+		 [i::int]
+		 [res '()])
+	(for ((set! i 0) (< i num) (pre++ i))
+		 (let* ([val (SCM_MAKE_STR_COPYING (sqlite3_column_name (-> stmt core) i))])
+		   (set! res (Scm_Cons val res))))
+	(set! res (Scm_Reverse res))
+	(result res)))
+
 
