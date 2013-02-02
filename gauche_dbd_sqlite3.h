@@ -41,14 +41,11 @@ extern sqlite3 * Sqlite3OpenDb(ScmString * path);
 extern ScmSqlite3Stmt * Sqlite3StmtMake();
 
 extern int Sqlite3IsStmt(ScmObj obj);
-extern ScmObj Sqlite3EscapeString(ScmString * value);
 extern int Sqlite3PrepareStmt(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql);
 
 extern ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * scm_stmt);
 extern int Sqlite3StmtFinish(ScmSqlite3Stmt * scm_stmt);
-extern ScmObj Sqlite3StmtColumnNames(ScmSqlite3Stmt * scm_stmt);
 extern int Sqlite3StmtIsEnd(ScmSqlite3Stmt * stmt);
-extern int Sqlite3StmtIsClosed(ScmSqlite3Stmt * stmt);
 
 /* Epilogue */
 SCM_DECL_END

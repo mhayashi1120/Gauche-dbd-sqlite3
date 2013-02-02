@@ -134,23 +134,6 @@ static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
 /*     /\* Scm_GetDouble(value); *\/ */
 /* } */
 
-/* void Sqlite3StmtReset(ScmSqlite3Stmt * stmt) */
-/* { */
-/*     sqlite3_reset(stmt->core); */
-/* } */
-
-ScmSqlite3Stmt * Sqlite3StmtMake()
-{
-    ScmSqlite3Stmt * stmt = SCM_MALLOC(sizeof(ScmSqlite3Stmt));
-
-    stmt->core = NULL;
-
-    stmt->executed = 0;
-    stmt->terminated = 0;
-
-    return stmt;
-}
-
 int Sqlite3PrepareStmt(ScmObj db_obj, ScmSqlite3Stmt * stmt, ScmString * sql)
 {
     sqlite3 * db;
@@ -217,11 +200,6 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 	/* http://www.sqlite.org/c3ref/c_abort.html */
 	Scm_Error("sqlite3_step failed: %d", rc);
     }
-}
-
-int Sqlite3StmtIsClosed(ScmSqlite3Stmt * stmt)
-{
-    return ((stmt->core == NULL) ? 1 : 0);
 }
 
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)

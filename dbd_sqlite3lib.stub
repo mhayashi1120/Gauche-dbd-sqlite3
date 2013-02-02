@@ -11,14 +11,47 @@
 ;; (define-cproc bind-sqlite-parameters (stmt::<sqlite3-statement> params::<list>)
 ;;   (expr <sqlite3-statement> "Sqlite3StmtBind(stmt, params)"))
 
-(define-cproc make-sqlite-statement ()
-  (expr <sqlite3-statement> "Sqlite3StmtMake()"))
+;; (define-cproc sqlite3-reset-statement (stmt::<sqlite3-statement>) :: <void>
+;;   (sqlite3_reset (-> stmt core)))
+
+(define-cproc make-sqlite-statement () :: <sqlite3-statement>
+  (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
+	(set! (-> stmt core) NULL)
+	(set! (-> stmt executed) 0)
+	(set! (-> stmt terminated) 0)
+	(result stmt)))
 
 (define-cproc sqlite3-close (db::<sqlite3-handle>)
   (expr <boolean> "Sqlite3DbClose(db_scm)"))
 
-(define-cproc sqlite3-prepare (db::<sqlite3-handle> stmt::<sqlite3-statement> sql::<string>)
-  (expr <boolean> "Sqlite3PrepareStmt(db_scm, stmt, sql)"))
+(define-cfn check-db (db::sqlite3*)
+  :: void :static
+  ;;TODO
+  ;; (when (sqlite3-closed-p db)
+  ;; 	(Scm_Error "<sqlite3-handle> already closed"))
+  )
+
+(define-cfn prepare-statement (db::sqlite3* sql::(const char*) stmt::ScmSqlite3Stmt*)
+  :: int :static
+  (let* ([handle::sqlite3_stmt* NULL]
+         [tail::(const char*)])
+    (unless (== (sqlite3_prepare_v2 db sql -1 (& handle) (& tail)) SQLITE_OK)
+      (return FALSE))
+    (set! (-> stmt core) handle)
+    (set! (-> stmt tail) tail)
+    (return TRUE)))
+
+(define-cproc sqlite3-prepare (db::<sqlite3-handle> stmt::<sqlite3-statement> sql::<string>) :: <boolean>
+  (let* ([query::(const char*) (Scm_GetStringConst sql)])
+	(check-db db)
+	(cond
+	 [(== (prepare-statement db query stmt) 0)
+	  (result FALSE)]
+	 [else
+	  (set! (-> stmt db) db)
+	  (set! (-> stmt executed) 1)
+	  (set! (-> stmt terminated) 0)
+	  (result TRUE)])))
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-handle>
   (let* ([db::sqlite3*])
@@ -42,8 +75,11 @@
 (define-cproc sqlite3-statement-p (obj)
   (expr <boolean> "Sqlite3IsStmt(obj_scm)"))
 
-(define-cproc sqlite3-closed-p (db::<sqlite3-handle>)
-  (expr <boolean> "Sqlite3DbIsClosed(db_scm)"))
+(define-cproc sqlite3-closed-p (db) :: <boolean>
+  (SCM_ASSERT (SCM_FOREIGN_POINTER_P db))
+  (result (SCM_TRUEP
+		   (Scm_ForeignPointerAttrGet (SCM_FOREIGN_POINTER db)
+									  'closed? SCM_FALSE))))
 
 (define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>)
   (expr <boolean> "Sqlite3StmtIsEnd(stmt)"))
