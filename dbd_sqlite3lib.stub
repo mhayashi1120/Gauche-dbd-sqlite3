@@ -12,7 +12,7 @@
 ;; (define-cproc sqlite3-reset-statement (stmt::<sqlite3-statement>) :: <void>
 ;;   (sqlite3_reset (-> stmt core)))
 
-(define-cproc make-sqlite-statement () :: <sqlite3-statement>
+(define-cproc sqlite3-make-statement () :: <sqlite3-statement>
   (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
     (set! (-> stmt core) NULL)
     (set! (-> stmt executed) FALSE)
@@ -24,7 +24,7 @@
 
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
-  (when (== (-> db terminated) TRUE)
+  (when (-> db terminated)
     (Scm_Error "<sqlite3-db-handle> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
@@ -69,10 +69,10 @@
 (define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
   (sqlite3_last_insert_rowid (-> db core)))
 
-(define-cproc sqlite3-statement-p (obj) :: <boolean>
+(define-cproc sqlite3-statement? (obj) :: <boolean>
   (result (SCM_SQLITE3_STMT_P obj)))
 
-(define-cproc sqlite3-closed-p (db::<sqlite3-db>) :: <boolean>
+(define-cproc sqlite3-closed? (db::<sqlite3-db>) :: <boolean>
   (result (-> db terminated)))
 
 (define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>) :: <boolean>
@@ -81,7 +81,7 @@
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (call "Sqlite3StmtStep"))
 
-(define-cproc sqlite3-statement-closed-p (stmt::<sqlite3-statement>) :: <boolean>
+(define-cproc sqlite3-statement-closed? (stmt::<sqlite3-statement>) :: <boolean>
   (let* ([handle::sqlite3_stmt* (-> stmt core)])
     (result (== handle NULL))))
 

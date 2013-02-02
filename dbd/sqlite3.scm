@@ -70,7 +70,7 @@
   ((c <sqlite3-connection>) (q <dbi-query>) params)
 
   (define (prepare db query)
-    (let1 stmt (make-sqlite-statement)
+    (let1 stmt (sqlite3-make-statement)
       (unless (guard (e [else
                          (error <sqlite3-error>
                                 :message (condition-ref e 'message))])
@@ -94,10 +94,10 @@
   (sqlite3-escape-string str))
 
 (define-method dbi-open? ((c <sqlite3-connection>))
-  (not (sqlite3-closed-p (slot-ref c '%handle))))
+  (not (sqlite3-closed? (slot-ref c '%handle))))
 
 (define-method dbi-open? ((c <sqlite3-result-set>))
-  (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
+  (not (sqlite3-statement-closed? (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
   (guard (e (else (error <sqlite3-error>
