@@ -166,7 +166,7 @@ ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
 
 	}
 
-	stmt->terminated = 1;
+	stmt->terminated = TRUE;
 	return SCM_FALSE;
 
     } else {
@@ -200,7 +200,7 @@ int Sqlite3DbClose(ScmSqlite3 * db)
     sqlite3_close(db->core);
 
     db->core = NULL;
-    db->terminated = 1;
+    db->terminated = TRUE;
 
     return 1;
 }

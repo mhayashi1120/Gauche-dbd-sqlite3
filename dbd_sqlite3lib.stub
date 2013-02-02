@@ -1,5 +1,4 @@
-"#include  \"gauche_dbd_sqlite3.h\""
-;;(initcode (.include  "gauche_dbd_sqlite3.h"))
+(declcode (.include  "gauche_dbd_sqlite3.h"))
 
 (define-type <sqlite3-handle> "ScmSqlite3 *" "sqlite3-handle"
   "SCM_SQLITE3_P" "SQLITE3_HANDLE_UNBOX" "SQLITE3_HANDLE_BOX")
@@ -17,7 +16,7 @@
   (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
 	(set! (-> stmt core) NULL)
 	(set! (-> stmt executed) 0)
-	(set! (-> stmt terminated) 0)
+	(set! (-> stmt terminated) FALSE)
 	(result stmt)))
 
 (define-cproc sqlite3-close (db::<sqlite3-handle>) :: <boolean>
@@ -25,8 +24,7 @@
 
 (define-cfn check-db (db::ScmSqlite3*)
   :: void :static
-  ;;TODO
-  (when (== (-> db terminated) 1)
+  (when (== (-> db terminated) TRUE)
   	(Scm_Error "<sqlite3-handle> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3* sql::(const char*) stmt::ScmSqlite3Stmt*)
@@ -48,14 +46,14 @@
 	 [else
 	  (set! (-> stmt db) db)
 	  (set! (-> stmt executed) 1)
-	  (set! (-> stmt terminated) 0)
+	  (set! (-> stmt terminated) FALSE)
 	  (result TRUE)])))
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-handle>
   (let* ([db::ScmSqlite3* (SCM_MALLOC(sizeof(ScmSqlite3)))])
 	(unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
 	  (Scm_Error "OPEN ERROR"))
-	(set! (-> db terminated) 0)
+	(set! (-> db terminated) FALSE)
 	(result db)))
 
 (define-cproc sqlite3-escape-string (value::<string>)
