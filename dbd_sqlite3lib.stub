@@ -15,7 +15,7 @@
 (define-cproc make-sqlite-statement () :: <sqlite3-statement>
   (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
 	(set! (-> stmt core) NULL)
-	(set! (-> stmt executed) 0)
+	(set! (-> stmt executed) FALSE)
 	(set! (-> stmt terminated) FALSE)
 	(result stmt)))
 
@@ -45,7 +45,7 @@
 	  (result FALSE)]
 	 [else
 	  (set! (-> stmt db) db)
-	  (set! (-> stmt executed) 1)
+	  (set! (-> stmt executed) TRUE)
 	  (set! (-> stmt terminated) FALSE)
 	  (result TRUE)])))
 
