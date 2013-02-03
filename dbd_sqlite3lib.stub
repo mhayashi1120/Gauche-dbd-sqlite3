@@ -59,7 +59,7 @@ ScmClass *Sqlite3StmtClass;
     (set! (-> stmt tail) tail)
     (return TRUE)))
 
-(define-cfn sqlite3-db-finalize (db::ScmSqlite3Db*)
+(define-cfn db-close (db::ScmSqlite3Db*)
   :: int :static
   (cond
    [(== (-> db core) NULL)
@@ -71,7 +71,7 @@ ScmClass *Sqlite3StmtClass;
 	(set! (-> db terminated) TRUE)
 	(return TRUE)]))
 
-(define-cfn sqlite3-stmt-finalize (stmt::ScmSqlite3Stmt*)
+(define-cfn stmt-close (stmt::ScmSqlite3Stmt*)
   :: int :static
   (cond
    [(== (-> stmt core) NULL)
@@ -86,13 +86,13 @@ ScmClass *Sqlite3StmtClass;
   :: void :static
   (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
   (let* ([db::ScmSqlite3Db* (SQLITE3_DB_HANDLE_UNBOX obj)])
-	(sqlite3-db-finalize db)))
+	(db-close db)))
 
 (define-cfn stmt-finalize (obj::ScmObj)
   :: void :static
   (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
   (let* ([stmt::ScmSqlite3Stmt* (SQLITE3_STMT_HANDLE_UNBOX obj)])
-	(sqlite3-stmt-finalize stmt)))
+	(stmt-close stmt)))
 
 (define-cfn make-row-vector (stmt::ScmSqlite3Stmt*)
   :: ScmObj :static
@@ -127,14 +127,15 @@ ScmClass *Sqlite3StmtClass;
 ;;;
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
-  (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))])
-    (unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
-      (Scm_Error "OPEN ERROR"))
+  (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))]
+		 [cpath::(const char*) (Scm_GetStringConst path)])
+    (unless (== (sqlite3_open cpath (& (-> db core))) SQLITE_OK)
+      (Scm_Error "Failed to open database %s" cpath))
     (set! (-> db terminated) FALSE)
     (result db)))
 
 (define-cproc sqlite3-db-close (db::<sqlite3-db>) :: <boolean>
-  (result (sqlite3-db-finalize db)))
+  (result (db-close db)))
 
 (define-cproc sqlite3-db-closed? (db::<sqlite3-db>) :: <boolean>
   (result (-> db terminated)))
@@ -169,7 +170,7 @@ ScmClass *Sqlite3StmtClass;
     (result (== handle NULL))))
 
 (define-cproc sqlite3-statement-close (stmt::<sqlite3-statement>) :: <boolean>
-  (result (sqlite3-stmt-finalize stmt)))
+  (result (stmt-close stmt)))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (let* ([rc::int])
