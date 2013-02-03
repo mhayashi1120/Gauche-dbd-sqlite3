@@ -186,11 +186,14 @@
          (select-rows "SELECT id FROM tbl1 WHERE id = 9223372036854775807")))
 
 (test* "Checking auto increment id"
-       1
+       '(1 2)
        (begin
          (dbi-do connection "CREATE TABLE tbl2(id INTEGER PRIMARY KEY);")
          (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
-         (sqlite3-last-id connection)))
+         (let1 res1 (sqlite3-last-id connection)
+           (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
+           (let1 res2 (sqlite3-last-id connection)
+             (list res1 res2)))))
 
 (test* "Checking compound INSERT statements"
        '(#(301) #(302) #(303))

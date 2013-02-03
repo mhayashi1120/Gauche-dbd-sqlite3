@@ -6,11 +6,6 @@
 
 (declcode (.include  "gauche_dbd_sqlite3.h"))
 
-(declcode "
-ScmClass *Sqlite3DbClass;
-ScmClass *Sqlite3StmtClass;
-")
-
 (initcode
  (set! Sqlite3DbClass (Scm_MakeForeignPointerClass
                        mod "<sqlite3-db>" NULL
@@ -125,7 +120,7 @@ ScmClass *Sqlite3StmtClass;
 ;;;
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
-  (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))]
+  (let* ([db::ScmSqlite3Db* (SCM_MALLOC (sizeof (ScmSqlite3Db)))]
          [cpath::(const char*) (Scm_GetStringConst path)])
     (unless (== (sqlite3_open cpath (& (-> db core))) SQLITE_OK)
       (Scm_Error "Failed to open database %s" cpath))
@@ -139,7 +134,7 @@ ScmClass *Sqlite3StmtClass;
   (result (-> db terminated)))
 
 (define-cproc sqlite3-make-statement () :: <sqlite3-statement>
-  (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
+  (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC (sizeof (ScmSqlite3Stmt)))])
     (set! (-> stmt core) NULL)
     (set! (-> stmt executed) FALSE)
     (set! (-> stmt terminated) FALSE)
@@ -233,6 +228,6 @@ ScmClass *Sqlite3StmtClass;
   (result (sqlite3_errmsg (-> db core))))
 
 (define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
-  (sqlite3_last_insert_rowid (-> db core)))
+  (result (sqlite3_last_insert_rowid (-> db core))))
 
 

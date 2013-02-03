@@ -8,7 +8,7 @@
 
 #include <sqlite3.h>
 
-extern ScmClass *Sqlite3DbClass;
+ScmClass *Sqlite3DbClass;
 
 #define SCM_SQLITE3_DB_P(obj)	(SCM_XTYPEP(obj, Sqlite3DbClass))
 #define SQLITE3_DB_HANDLE_UNBOX(obj) SCM_FOREIGN_POINTER_REF(ScmSqlite3Db *, obj)
@@ -20,7 +20,7 @@ typedef struct ScmSqlite3DbRec {
 	int terminated;
 } ScmSqlite3Db;
 
-extern ScmClass *Sqlite3StmtClass;
+ScmClass *Sqlite3StmtClass;
 
 #define SCM_SQLITE3_STMT_P(obj)	(SCM_XTYPEP(obj, Sqlite3StmtClass))
 #define SQLITE3_STMT_HANDLE_UNBOX(obj) SCM_FOREIGN_POINTER_REF(ScmSqlite3Stmt *, obj)
