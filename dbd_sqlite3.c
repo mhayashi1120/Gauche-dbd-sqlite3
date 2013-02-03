@@ -118,7 +118,7 @@ ScmObj Scm_Init_dbd_sqlite3(void)
 	Scm_MakeForeignPointerClass(mod, "<sqlite3-db>",
 				    NULL, Sqlite3Db_finalize, 0);
     Sqlite3StmtClass =
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement-handle>",
+	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement>",
 				    NULL, Sqlite3Stmt_finalize, 0);
 
     /* Register stub-generated procedures */

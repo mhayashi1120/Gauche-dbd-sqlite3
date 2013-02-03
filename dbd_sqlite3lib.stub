@@ -10,10 +10,10 @@
 
 (declcode (.include  "gauche_dbd_sqlite3.h"))
 
-(define-type <sqlite3-db> "ScmSqlite3Db *" "sqlite3-db-handle"
+(define-type <sqlite3-db> "ScmSqlite3Db *" #f
   "SCM_SQLITE3_DB_P" "SQLITE3_DB_HANDLE_UNBOX" "SQLITE3_DB_HANDLE_BOX")
 
-(define-type <sqlite3-statement> "ScmSqlite3Stmt *" "sqlite3-statement-handle"
+(define-type <sqlite3-statement> "ScmSqlite3Stmt *" #f
   "SCM_SQLITE3_STMT_P" "SQLITE3_STMT_HANDLE_UNBOX" "SQLITE3_STMT_HANDLE_BOX")
 
 ;; (define-cproc bind-sqlite-parameters (stmt::<sqlite3-statement> params::<list>)
@@ -35,14 +35,14 @@
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
   (when (-> db terminated)
-    (Scm_Error "<sqlite3-db-handle> already closed")))
+    (Scm_Error "<sqlite3-db> already closed")))
 
 (define-cfn check-statement (stmt::ScmSqlite3Stmt*)
   :: void :static
   (unless (-> stmt executed)
-	(Scm_Error "<sqlite3-statement-handle> not executed yet"))
+	(Scm_Error "<sqlite3-statement> not executed yet"))
   (when (-> stmt terminated)
-	(Scm_Error "<sqlite3-statement-handle> already closed")))
+	(Scm_Error "<sqlite3-statement> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
   :: int :static
@@ -70,8 +70,8 @@
 			[(SQLITE_TEXT)
 			 (set! value (SCM_MAKE_STR_COPYING (sqlite3_column_text (-> stmt core) i)))]
 			[(SQLITE_BLOB)
-			 ;;TODO why two sqlite3_column_bytes sqlite3_column_blob function listed?
 			 (set! value (Scm_MakeU8VectorFromArray
+						  ;; size of blob
 						  (sqlite3_column_bytes (-> stmt core) i)
 						  (cast (unsigned char *) (sqlite3_column_blob (-> stmt core) i))))]
 			[(SQLITE_NULL)
@@ -86,13 +86,13 @@
   (let* ([query::(const char*) (Scm_GetStringConst sql)])
     (check-db db)
     (cond
-     [(== (prepare-statement db query stmt) 0)
-      (result FALSE)]
-     [else
+     [(prepare-statement db query stmt)
       (set! (-> stmt db) db)
       (set! (-> stmt executed) TRUE)
       (set! (-> stmt terminated) FALSE)
-      (result TRUE)])))
+      (result TRUE)]
+     [else
+      (result FALSE)])))
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
   (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))])
@@ -152,6 +152,7 @@
 		   (when (== rc SQLITE_ROW)
 			 (return (make-row-vector stmt)))
 
+		   ;;TODO 3 UPDATE statement. -> stmt terminated is wrong?
 		   (when (== rc SQLITE_DONE)
 			 (break))
 
