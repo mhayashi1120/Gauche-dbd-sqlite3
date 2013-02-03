@@ -33,6 +33,10 @@ ScmClass *Sqlite3StmtClass;
 ;; (define-cproc sqlite3-reset-statement (stmt::<sqlite3-statement>) :: <void>
 ;;   (sqlite3_reset (-> stmt core)))
 
+;;;
+;;; C functions
+;;;
+
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
   (when (-> db terminated)
@@ -118,15 +122,32 @@ ScmClass *Sqlite3StmtClass;
 
     (return res)))
 
+;;;
+;;; function call from scheme
+;;;
+
+(define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
+  (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))])
+    (unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
+      (Scm_Error "OPEN ERROR"))
+    (set! (-> db terminated) FALSE)
+    (result db)))
+
+(define-cproc sqlite3-db-close (db::<sqlite3-db>) :: <boolean>
+  (result (sqlite3-db-finalize db)))
+
+(define-cproc sqlite3-db-finish (db::<sqlite3-db>) :: <boolean>
+  (result (sqlite3-db-finalize db)))
+
+(define-cproc sqlite3-closed? (db::<sqlite3-db>) :: <boolean>
+  (result (-> db terminated)))
+
 (define-cproc sqlite3-make-statement () :: <sqlite3-statement>
   (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC(sizeof(ScmSqlite3Stmt)))])
     (set! (-> stmt core) NULL)
     (set! (-> stmt executed) FALSE)
     (set! (-> stmt terminated) FALSE)
     (result stmt)))
-
-(define-cproc sqlite3-db-close (db::<sqlite3-db>) :: <boolean>
-  (result (sqlite3-db-finalize db)))
 
 (define-cproc sqlite3-prepare (db::<sqlite3-db> stmt::<sqlite3-statement> sql::<string>) :: <boolean>
   (let* ([query::(const char*) (Scm_GetStringConst sql)])
@@ -140,12 +161,18 @@ ScmClass *Sqlite3StmtClass;
      [else
       (result FALSE)])))
 
-(define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
-  (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))])
-    (unless (== (sqlite3_open (Scm_GetString path) (& (-> db core))) SQLITE_OK)
-      (Scm_Error "OPEN ERROR"))
-    (set! (-> db terminated) FALSE)
-    (result db)))
+(define-cproc sqlite3-statement? (obj) :: <boolean>
+  (result (SCM_SQLITE3_STMT_P obj)))
+
+(define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>) :: <boolean>
+  (result (-> stmt terminated)))
+
+(define-cproc sqlite3-statement-closed? (stmt::<sqlite3-statement>) :: <boolean>
+  (let* ([handle::sqlite3_stmt* (-> stmt core)])
+    (result (== handle NULL))))
+
+(define-cproc sqlite3-statement-close (stmt::<sqlite3-statement>) :: <boolean>
+  (result (sqlite3-stmt-finalize stmt)))
 
 (define-cproc sqlite3-escape-string (value::<string>)
   (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]
@@ -159,15 +186,6 @@ ScmClass *Sqlite3StmtClass;
 
 (define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
   (sqlite3_last_insert_rowid (-> db core)))
-
-(define-cproc sqlite3-statement? (obj) :: <boolean>
-  (result (SCM_SQLITE3_STMT_P obj)))
-
-(define-cproc sqlite3-closed? (db::<sqlite3-db>) :: <boolean>
-  (result (-> db terminated)))
-
-(define-cproc sqlite3-statement-end? (stmt::<sqlite3-statement>) :: <boolean>
-  (result (-> stmt terminated)))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (let* ([rc::int])
@@ -210,16 +228,6 @@ ScmClass *Sqlite3StmtClass;
 
 	   ;; http://www.sqlite.org/c3ref/c_abort.html
 	   (Scm_Error "sqlite3_step failed: %d" rc)])))
-
-(define-cproc sqlite3-statement-closed? (stmt::<sqlite3-statement>) :: <boolean>
-  (let* ([handle::sqlite3_stmt* (-> stmt core)])
-    (result (== handle NULL))))
-
-(define-cproc sqlite3-db-finish (db::<sqlite3-db>) :: <boolean>
-  (result (sqlite3-db-finalize db)))
-
-(define-cproc sqlite3-statement-close (stmt::<sqlite3-statement>) :: <boolean>
-  (result (sqlite3-stmt-finalize stmt)))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
   (let* ([num::int (sqlite3_column_count (-> stmt core))]
