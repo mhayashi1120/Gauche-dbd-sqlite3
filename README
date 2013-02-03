@@ -20,7 +20,7 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 * sqlite3 specifics
 [Function] sqlite3-last-id
 
-Get ROWID which is INSERT into the argument connection in most recent successfully.
+Get ROWID which is INSERT into the argument connection in most recently.
 
 http://www.sqlite.org/c3ref/last_insert_rowid.html
 
