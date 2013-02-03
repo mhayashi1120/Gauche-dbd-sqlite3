@@ -1,14 +1,25 @@
 "
-#include <gauche.h>
-#include <gauche/bignum.h>
-#include <gauche/extend.h>
 #include <gauche/class.h>
+#include <gauche/bignum.h>
 #include <gauche/uvector.h>
 
 #include <sqlite3.h>
 "
 
 (declcode (.include  "gauche_dbd_sqlite3.h"))
+
+(declcode "
+ScmClass *Sqlite3DbClass;
+ScmClass *Sqlite3StmtClass;
+")
+
+(initcode
+  (set! Sqlite3DbClass (Scm_MakeForeignPointerClass
+						mod "<sqlite3-db>" NULL
+						db-finalize 0))
+  (set! Sqlite3StmtClass (Scm_MakeForeignPointerClass
+						  mod "<sqlite3-statement>" NULL
+						  stmt-finalize 0)))
 
 (define-type <sqlite3-db> "ScmSqlite3Db *" #f
   "SCM_SQLITE3_DB_P" "SQLITE3_DB_HANDLE_UNBOX" "SQLITE3_DB_HANDLE_BOX")
@@ -28,9 +39,6 @@
     (set! (-> stmt executed) FALSE)
     (set! (-> stmt terminated) FALSE)
     (result stmt)))
-
-(define-cproc sqlite3-close (db::<sqlite3-db>) :: <boolean>
-  (expr <boolean> "Sqlite3DbClose(db)"))
 
 (define-cfn check-db (db::ScmSqlite3Db*)
   :: void :static
@@ -53,6 +61,41 @@
     (set! (-> stmt core) handle)
     (set! (-> stmt tail) tail)
     (return TRUE)))
+
+(define-cfn sqlite3-db-finalize (db::ScmSqlite3Db*)
+  :: int :static
+  (cond
+   [(== (-> db core) NULL)
+	(return FALSE)]
+   [else
+    ;; TODO  check return value
+	(sqlite3_close (-> db core))
+	(set! (-> db core) NULL)
+	(set! (-> db terminated) TRUE)
+	(return TRUE)]))
+
+(define-cfn sqlite3-stmt-finalize (stmt::ScmSqlite3Stmt*)
+  :: int :static
+  (cond
+   [(== (-> stmt core) NULL)
+    (return FALSE)]
+   [else
+    ;; TODO  check return value
+    (sqlite3_finalize (-> stmt core))
+    (set! (-> stmt core) NULL)
+    (return TRUE)]))
+
+(define-cfn db-finalize (obj::ScmObj)
+  :: void :static
+  (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
+  (let* ([db::ScmSqlite3Db* (SQLITE3_DB_HANDLE_UNBOX obj)])
+	(sqlite3-db-finalize db)))
+
+(define-cfn stmt-finalize (obj::ScmObj)
+  :: void :static
+  (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
+  (let* ([stmt::ScmSqlite3Stmt* (SQLITE3_STMT_HANDLE_UNBOX obj)])
+	(sqlite3-stmt-finalize stmt)))
 
 (define-cfn make-row-vector (stmt::ScmSqlite3Stmt*)
   :: ScmObj :static
@@ -81,6 +124,9 @@
 		 (Scm_VectorSet (SCM_VECTOR res) i value))
 
     (return res)))
+
+(define-cproc sqlite3-close (db::<sqlite3-db>) :: <boolean>
+  (result (sqlite3-db-finalize db)))
 
 (define-cproc sqlite3-prepare (db::<sqlite3-db> stmt::<sqlite3-statement> sql::<string>) :: <boolean>
   (let* ([query::(const char*) (Scm_GetStringConst sql)])
@@ -169,14 +215,11 @@
   (let* ([handle::sqlite3_stmt* (-> stmt core)])
     (result (== handle NULL))))
 
+(define-cproc sqlite3-db-finish (db::<sqlite3-db>) :: <boolean>
+  (result (sqlite3-db-finalize db)))
+
 (define-cproc sqlite3-statement-finish (stmt::<sqlite3-statement>) :: <boolean>
-  (cond
-   [(== (-> stmt core) NULL)
-    (result FALSE)]
-   [else
-    (sqlite3_finalize (-> stmt core))
-    (set! (-> stmt core) NULL)
-    (result TRUE)]))
+  (result (sqlite3-stmt-finalize stmt)))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
   (let* ([num::int (sqlite3_column_count (-> stmt core))]
@@ -187,5 +230,6 @@
            (set! res (Scm_Cons val res))))
     (set! res (Scm_Reverse res))
     (result res)))
+
 
 

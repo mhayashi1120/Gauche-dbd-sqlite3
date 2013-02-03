@@ -2,14 +2,8 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <gauche/bignum.h>
-
-ScmClass *Sqlite3DbClass;
-ScmClass *Sqlite3StmtClass;
 
 extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
-static void Sqlite3Db_finalize(ScmObj obj);
-static void Sqlite3Stmt_finalize(ScmObj obj);
 
 /* 
  -  sqlite3_reset()
@@ -69,36 +63,6 @@ static void Sqlite3Stmt_finalize(ScmObj obj);
 /*     /\* Scm_GetDouble(value); *\/ */
 /* } */
 
-// TODO remove after canonicalize finalize if can..
-int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)
-{
-    if (stmt->core == NULL) {
-	return 0;
-    }
-
-    /* TODO check return value */
-    sqlite3_finalize(stmt->core);
-
-    stmt->core = NULL;
-
-    return 1;
-}
-
-int Sqlite3DbClose(ScmSqlite3Db * db)
-{
-    if (db->core == NULL) {
-	return 0;
-    }
-
-    // TODO  check return value
-    sqlite3_close(db->core);
-
-    db->core = NULL;
-    db->terminated = TRUE;
-
-    return 1;
-}
-
 /*
  * Module functions.
  */
@@ -113,30 +77,7 @@ ScmObj Scm_Init_dbd_sqlite3(void)
     /* Create the module if it doesn't exist yet. */
     mod = SCM_MODULE(SCM_FIND_MODULE("dbd.sqlite3", TRUE));
 
-    /* Register classes */
-    Sqlite3DbClass =
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-db>",
-				    NULL, Sqlite3Db_finalize, 0);
-    Sqlite3StmtClass =
-	Scm_MakeForeignPointerClass(mod, "<sqlite3-statement>",
-				    NULL, Sqlite3Stmt_finalize, 0);
-
     /* Register stub-generated procedures */
     Scm_Init_dbd_sqlite3lib(mod);
 }
 
-static void Sqlite3Db_finalize(ScmObj obj)
-{
-    SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
-
-    ScmSqlite3Db * db = SQLITE3_DB_HANDLE_UNBOX(obj);
-    Sqlite3DbClose(db);
-}
-
-static void Sqlite3Stmt_finalize(ScmObj obj)
-{
-    SCM_ASSERT(SCM_FOREIGN_POINTER_P(obj));
-
-    ScmSqlite3Stmt * stmt = SQLITE3_STMT_HANDLE_UNBOX(obj);
-    Sqlite3StmtFinish(stmt);
-}
