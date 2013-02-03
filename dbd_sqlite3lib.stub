@@ -120,7 +120,7 @@
 ;;;
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
-  (let* ([db::ScmSqlite3Db* (SCM_MALLOC (sizeof (ScmSqlite3Db)))]
+  (let* ([db::ScmSqlite3Db* (SCM_MALLOC (sizeof ScmSqlite3Db))]
          [cpath::(const char*) (Scm_GetStringConst path)])
     (unless (== (sqlite3_open cpath (& (-> db core))) SQLITE_OK)
       (Scm_Error "Failed to open database %s" cpath))
@@ -134,7 +134,7 @@
   (result (-> db terminated)))
 
 (define-cproc sqlite3-make-statement () :: <sqlite3-statement>
-  (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC (sizeof (ScmSqlite3Stmt)))])
+  (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC (sizeof ScmSqlite3Stmt))])
     (set! (-> stmt core) NULL)
     (set! (-> stmt executed) FALSE)
     (set! (-> stmt terminated) FALSE)
@@ -192,7 +192,8 @@
            (set! rc (sqlite3_step (-> stmt core)))
 
            (when (== rc SQLITE_ROW)
-             (return (make-row-vector stmt)))
+             (result (make-row-vector stmt))
+			 (break))
 
            ;;TODO 3 UPDATE statement. -> stmt terminated is wrong?
            (when (== rc SQLITE_DONE)
