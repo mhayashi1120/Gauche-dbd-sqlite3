@@ -1,7 +1,5 @@
 "
-#include <gauche/class.h>
 #include <gauche/bignum.h>
-#include <gauche/uvector.h>
 
 #include <sqlite3.h>
 "
@@ -14,12 +12,12 @@ ScmClass *Sqlite3StmtClass;
 ")
 
 (initcode
-  (set! Sqlite3DbClass (Scm_MakeForeignPointerClass
-						mod "<sqlite3-db>" NULL
-						db-finalize 0))
-  (set! Sqlite3StmtClass (Scm_MakeForeignPointerClass
-						  mod "<sqlite3-statement>" NULL
-						  stmt-finalize 0)))
+ (set! Sqlite3DbClass (Scm_MakeForeignPointerClass
+                       mod "<sqlite3-db>" NULL
+                       db-finalize 0))
+ (set! Sqlite3StmtClass (Scm_MakeForeignPointerClass
+                         mod "<sqlite3-statement>" NULL
+                         stmt-finalize 0)))
 
 (define-type <sqlite3-db> "ScmSqlite3Db *" #f
   "SCM_SQLITE3_DB_P" "SQLITE3_DB_HANDLE_UNBOX" "SQLITE3_DB_HANDLE_BOX")
@@ -45,9 +43,9 @@ ScmClass *Sqlite3StmtClass;
 (define-cfn check-statement (stmt::ScmSqlite3Stmt*)
   :: void :static
   (unless (-> stmt executed)
-	(Scm_Error "<sqlite3-statement> not executed yet"))
+    (Scm_Error "<sqlite3-statement> not executed yet"))
   (when (-> stmt terminated)
-	(Scm_Error "<sqlite3-statement> already closed")))
+    (Scm_Error "<sqlite3-statement> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
   :: int :static
@@ -63,13 +61,13 @@ ScmClass *Sqlite3StmtClass;
   :: int :static
   (cond
    [(== (-> db core) NULL)
-	(return FALSE)]
+    (return FALSE)]
    [else
     ;; TODO  check return value
-	(sqlite3_close (-> db core))
-	(set! (-> db core) NULL)
-	(set! (-> db terminated) TRUE)
-	(return TRUE)]))
+    (sqlite3_close (-> db core))
+    (set! (-> db core) NULL)
+    (set! (-> db terminated) TRUE)
+    (return TRUE)]))
 
 (define-cfn stmt-close (stmt::ScmSqlite3Stmt*)
   :: int :static
@@ -86,39 +84,39 @@ ScmClass *Sqlite3StmtClass;
   :: void :static
   (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
   (let* ([db::ScmSqlite3Db* (SQLITE3_DB_HANDLE_UNBOX obj)])
-	(db-close db)))
+    (db-close db)))
 
 (define-cfn stmt-finalize (obj::ScmObj)
   :: void :static
   (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
   (let* ([stmt::ScmSqlite3Stmt* (SQLITE3_STMT_HANDLE_UNBOX obj)])
-	(stmt-close stmt)))
+    (stmt-close stmt)))
 
 (define-cfn make-row-vector (stmt::ScmSqlite3Stmt*)
   :: ScmObj :static
   (let* ([i::(unsigned int)]
-		 [num::(unsigned int) (sqlite3_column_count (-> stmt core))]
-		 [res::ScmObj (Scm_MakeVector num SCM_FALSE)]
-		 [value::ScmObj])
-	(for ((set! i 0) (< i num) (pre++ i))
-		 (let* ([type::int (sqlite3_column_type (-> stmt core) i)])
-		   (case type
-			[(SQLITE_INTEGER)
-			 (set! value (Scm_MakeBignumFromSI (sqlite3_column_int64 (-> stmt core) i)))]
-			[(SQLITE_FLOAT)
-			 (set! value (Scm_MakeFlonum (sqlite3_column_double (-> stmt core) i)))]
-			[(SQLITE_TEXT)
-			 (set! value (SCM_MAKE_STR_COPYING (sqlite3_column_text (-> stmt core) i)))]
-			[(SQLITE_BLOB)
-			 (set! value (Scm_MakeU8VectorFromArray
-						  ;; size of blob
-						  (sqlite3_column_bytes (-> stmt core) i)
-						  (cast (unsigned char *) (sqlite3_column_blob (-> stmt core) i))))]
-			[(SQLITE_NULL)
-			 (set! value SCM_FALSE)]
-			[else
-			 (Scm_Error "unknown sqlite3_column_type")]))
-		 (Scm_VectorSet (SCM_VECTOR res) i value))
+         [num::(unsigned int) (sqlite3_column_count (-> stmt core))]
+         [res::ScmObj (Scm_MakeVector num SCM_FALSE)]
+         [value::ScmObj])
+    (for ((set! i 0) (< i num) (pre++ i))
+         (let* ([type::int (sqlite3_column_type (-> stmt core) i)])
+           (case type
+             [(SQLITE_INTEGER)
+              (set! value (Scm_MakeBignumFromSI (sqlite3_column_int64 (-> stmt core) i)))]
+             [(SQLITE_FLOAT)
+              (set! value (Scm_MakeFlonum (sqlite3_column_double (-> stmt core) i)))]
+             [(SQLITE_TEXT)
+              (set! value (SCM_MAKE_STR_COPYING (sqlite3_column_text (-> stmt core) i)))]
+             [(SQLITE_BLOB)
+              (set! value (Scm_MakeU8VectorFromArray
+                           ;; size of blob
+                           (sqlite3_column_bytes (-> stmt core) i)
+                           (cast (unsigned char *) (sqlite3_column_blob (-> stmt core) i))))]
+             [(SQLITE_NULL)
+              (set! value SCM_FALSE)]
+             [else
+              (Scm_Error "unknown sqlite3_column_type")]))
+         (Scm_VectorSet (SCM_VECTOR res) i value))
 
     (return res)))
 
@@ -128,7 +126,7 @@ ScmClass *Sqlite3StmtClass;
 
 (define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
   (let* ([db::ScmSqlite3Db* (SCM_MALLOC(sizeof(ScmSqlite3Db)))]
-		 [cpath::(const char*) (Scm_GetStringConst path)])
+         [cpath::(const char*) (Scm_GetStringConst path)])
     (unless (== (sqlite3_open cpath (& (-> db core))) SQLITE_OK)
       (Scm_Error "Failed to open database %s" cpath))
     (set! (-> db terminated) FALSE)
@@ -174,45 +172,45 @@ ScmClass *Sqlite3StmtClass;
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (let* ([rc::int])
-	(check-statement stmt)
+    (check-statement stmt)
     (set! rc (sqlite3_step (-> stmt core)))
 
-	;;TODO test.scm all path of this code block
+    ;;TODO test.scm all path of this code block
 
-	(case rc
-	  [(SQLITE_ROW)
-	   ;; returned from SELECT statement
-	   (result (make-row-vector stmt))]
-	  [(SQLITE_DONE)
-	   ;; returned from NO result set.
-	   ;; continue until result set is returned.
+    (case rc
+      [(SQLITE_ROW)
+       ;; returned from SELECT statement
+       (result (make-row-vector stmt))]
+      [(SQLITE_DONE)
+       ;; returned from NO result set.
+       ;; continue until result set is returned.
 
-	   ;; /* TODO  */
-	   ;; /* multiple SELECT statement */
+       ;; /* TODO  */
+       ;; /* multiple SELECT statement */
 
-	   ;; stmt->tail has rest of multiple statements.
-	   (while (and (-> stmt tail) (* (-> stmt tail)))
-		 (unless (prepare-statement (-> stmt db) (-> stmt tail) stmt)
-		   (Scm_Error "sqlite3_prepare_v2 failed while handling compound statement."))
+       ;; stmt->tail has rest of multiple statements.
+       (while (and (-> stmt tail) (* (-> stmt tail)))
+         (unless (prepare-statement (-> stmt db) (-> stmt tail) stmt)
+           (Scm_Error "sqlite3_prepare_v2 failed while handling compound statement."))
 
-		 (while TRUE
-		   (set! rc (sqlite3_step (-> stmt core)))
-		  
-		   (when (== rc SQLITE_ROW)
-			 (return (make-row-vector stmt)))
+         (while TRUE
+           (set! rc (sqlite3_step (-> stmt core)))
 
-		   ;;TODO 3 UPDATE statement. -> stmt terminated is wrong?
-		   (when (== rc SQLITE_DONE)
-			 (break))
+           (when (== rc SQLITE_ROW)
+             (return (make-row-vector stmt)))
 
-		   (Scm_Error "sqlite3_step failed: %d" rc)))
+           ;;TODO 3 UPDATE statement. -> stmt terminated is wrong?
+           (when (== rc SQLITE_DONE)
+             (break))
 
-	   (set! (-> stmt terminated) TRUE)
-	   (result SCM_FALSE)]
-	  [else
+           (Scm_Error "sqlite3_step failed: %d" rc)))
 
-	   ;; http://www.sqlite.org/c3ref/c_abort.html
-	   (Scm_Error "sqlite3_step failed: %d" rc)])))
+       (set! (-> stmt terminated) TRUE)
+       (result SCM_FALSE)]
+      [else
+
+       ;; http://www.sqlite.org/c3ref/c_abort.html
+       (Scm_Error "sqlite3_step failed: %d" rc)])))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
   (let* ([num::int (sqlite3_column_count (-> stmt core))]
