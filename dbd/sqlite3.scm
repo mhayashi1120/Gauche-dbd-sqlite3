@@ -26,7 +26,7 @@
              (^r (dbi-get-value r 1)) table))
 
 (define (sqlite3-error-message conn)
-  (sqlite3-errmsg (slot-ref conn '%handle)))
+  (sqlite3-last-errmsg (slot-ref conn '%handle)))
 
 (define (sqlite3-last-id conn)
   (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
@@ -75,7 +75,7 @@
                          (error <sqlite3-error>
                                 :message (condition-ref e 'message))])
                 (sqlite3-prepare db stmt query))
-        (let1 msg (sqlite3-errmsg db)
+        (let1 msg (sqlite3-last-errmsg db)
           (errorf
            <sqlite3-error> :error-message msg
            "SQLite3 prepare failed: ~a" msg)))
@@ -94,7 +94,7 @@
   (sqlite3-escape-string str))
 
 (define-method dbi-open? ((c <sqlite3-connection>))
-  (not (sqlite3-closed? (slot-ref c '%handle))))
+  (not (sqlite3-db-closed? (slot-ref c '%handle))))
 
 (define-method dbi-open? ((c <sqlite3-result-set>))
   (not (sqlite3-statement-closed? (slot-ref c '%handle))))
@@ -152,7 +152,7 @@
 
   (define (next)
     (guard (e [else
-               (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
+               (let1 msg (sqlite3-last-errmsg (slot-ref rset '%db))
                  (errorf
                   <sqlite3-error> :error-message msg
                   "SQLite3 step failed: ~a" msg))])

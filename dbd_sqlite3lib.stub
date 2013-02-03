@@ -136,10 +136,7 @@ ScmClass *Sqlite3StmtClass;
 (define-cproc sqlite3-db-close (db::<sqlite3-db>) :: <boolean>
   (result (sqlite3-db-finalize db)))
 
-(define-cproc sqlite3-db-finish (db::<sqlite3-db>) :: <boolean>
-  (result (sqlite3-db-finalize db)))
-
-(define-cproc sqlite3-closed? (db::<sqlite3-db>) :: <boolean>
+(define-cproc sqlite3-db-closed? (db::<sqlite3-db>) :: <boolean>
   (result (-> db terminated)))
 
 (define-cproc sqlite3-make-statement () :: <sqlite3-statement>
@@ -173,19 +170,6 @@ ScmClass *Sqlite3StmtClass;
 
 (define-cproc sqlite3-statement-close (stmt::<sqlite3-statement>) :: <boolean>
   (result (sqlite3-stmt-finalize stmt)))
-
-(define-cproc sqlite3-escape-string (value::<string>)
-  (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]
-          [res::ScmObj (SCM_MAKE_STR_COPYING tmp)])
-
-    (sqlite3_free tmp)
-    (result res)))
-
-(define-cproc sqlite3-errmsg (db::<sqlite3-db>) :: <const-cstring>
-  (result (sqlite3_errmsg (-> db core))))
-
-(define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
-  (sqlite3_last_insert_rowid (-> db core)))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (let* ([rc::int])
@@ -239,5 +223,17 @@ ScmClass *Sqlite3StmtClass;
     (set! res (Scm_Reverse res))
     (result res)))
 
+(define-cproc sqlite3-escape-string (value::<string>)
+  (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]
+          [res::ScmObj (SCM_MAKE_STR_COPYING tmp)])
+
+    (sqlite3_free tmp)
+    (result res)))
+
+(define-cproc sqlite3-last-errmsg (db::<sqlite3-db>) :: <const-cstring>
+  (result (sqlite3_errmsg (-> db core))))
+
+(define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
+  (sqlite3_last_insert_rowid (-> db core)))
 
 
