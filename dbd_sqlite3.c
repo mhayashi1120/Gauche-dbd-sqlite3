@@ -11,65 +11,6 @@ extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
 static void Sqlite3Db_finalize(ScmObj obj);
 static void Sqlite3Stmt_finalize(ScmObj obj);
 
-static void stmt_check(ScmSqlite3Stmt * stmt)
-{
-    if (! stmt->executed) Scm_Error("<sqlite3-statement-handle> not executed yet");
-    if (stmt->terminated) Scm_Error("<sqlite3-statement-handle> already closed");
-}
-
-static int PrepareStatement(ScmSqlite3Db * db, const char * sql, ScmSqlite3Stmt * stmt)
-{
-    sqlite3_stmt * vm = NULL;
-    const char * tail;
-
-    if (sqlite3_prepare_v2(db->core, sql, -1, &vm, &tail) != SQLITE_OK) {
-	/* Failed */
-	return 0;
-    }
-
-    stmt->core = vm;
-    stmt->tail = tail;
-
-    return 1;
-}
-
-static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
-{
-    unsigned int i, num;
-    ScmObj result;
-    ScmObj value;
-    num = sqlite3_column_count(stmt->core);
-    result = Scm_MakeVector(num, SCM_FALSE);
-
-    for (i = 0; i < num; i++) {
-	switch (sqlite3_column_type(stmt->core, i)) {
-	case SQLITE_INTEGER:
-	    value = Scm_MakeBignumFromSI(sqlite3_column_int64(stmt->core, i));
-	    break;
-	case SQLITE_FLOAT:
-	    value = Scm_MakeFlonum(sqlite3_column_double(stmt->core, i));
-	    break;
-	case SQLITE_TEXT:
-	    value = SCM_MAKE_STR_COPYING(sqlite3_column_text(stmt->core, i));
-	    break;
-	case SQLITE_BLOB:
-	    value = Scm_MakeU8VectorFromArray(
-		sqlite3_column_bytes(stmt->core, i),
-		(unsigned char *)sqlite3_column_blob(stmt->core, i));
-	    break;
-	case SQLITE_NULL:
-	    value = SCM_FALSE;
-	    break;
-	default:
-	    Scm_Error("unknown sqlite3_column_type");
-	}
-
-	Scm_VectorSet(SCM_VECTOR(result), i, value);
-    }
-
-    return SCM_OBJ(result);
-}
-
 /* 
  -  sqlite3_reset()
  - int sqlite3_bind_blob(sqlite3_stmt*, int, const void*, int n, void(*)(void*));
@@ -127,53 +68,6 @@ static ScmObj MakeRowVector(ScmSqlite3Stmt * stmt)
 /*     /\* Scm_GetStringConst(value); *\/ */
 /*     /\* Scm_GetDouble(value); *\/ */
 /* } */
-
-ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * stmt)
-{
-    int rc;
-
-    stmt_check(stmt);
-
-    rc = sqlite3_step(stmt->core);
-
-    if (rc == SQLITE_ROW) {
-
-	return MakeRowVector(stmt);
-
-    } else if (rc == SQLITE_DONE) {
-	/* TODO  */
-	/* multiple SELECT statement */
-	while (stmt->tail && *stmt->tail) {
-
-	    if (!PrepareStatement(stmt->db, stmt->tail, stmt)) {
-	    	/* Failed */
-	    	Scm_Error("sqlite3_prepare_v2 failed while handling compound statement.");
-	    }
-
-	    do {
-
-	    	rc = sqlite3_step(stmt->core);
-
-	    	if (rc == SQLITE_ROW)
-	    	    return MakeRowVector(stmt);
-
-	    	if (rc == SQLITE_DONE)
-	    	    break;
-
-	    	Scm_Error("sqlite3_step failed: %d", rc);
-
-	    } while (1);
-
-	}
-
-	stmt->terminated = TRUE;
-	return SCM_FALSE;
-
-    } else {
-	/* http://www.sqlite.org/c3ref/c_abort.html */
-	Scm_Error("sqlite3_step failed: %d", rc);
-    }
-}
 
 // TODO remove after canonicalize finalize if can..
 int Sqlite3StmtFinish(ScmSqlite3Stmt * stmt)

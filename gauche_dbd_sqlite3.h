@@ -39,7 +39,6 @@ extern void Scm_Init_sqlite3lib(ScmModule *module);
 
 extern int Sqlite3DbClose(ScmSqlite3Db * db);
 
-extern ScmObj Sqlite3StmtStep(ScmSqlite3Stmt * scm_stmt);
 extern int Sqlite3StmtFinish(ScmSqlite3Stmt * scm_stmt);
 
 /* Epilogue */
