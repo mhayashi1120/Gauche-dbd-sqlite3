@@ -102,10 +102,10 @@
 (define-method dbi-close ((c <sqlite3-connection>))
   (guard (e (else (error <sqlite3-error>
                          :message (condition-ref e 'message))))
-    (sqlite3-close (slot-ref c '%handle))))
+    (sqlite3-db-close (slot-ref c '%handle))))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
-  (sqlite3-statement-finish (slot-ref result-set '%handle)))
+  (sqlite3-statement-close (slot-ref result-set '%handle)))
 
 ;;;
 ;;; Relation interfaces
