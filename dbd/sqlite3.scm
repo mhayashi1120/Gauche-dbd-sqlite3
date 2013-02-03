@@ -70,11 +70,12 @@
   ((c <sqlite3-connection>) (q <dbi-query>) params)
 
   (define (prepare db query)
-    (let1 stmt (sqlite3-make-statement)
-      (unless (guard (e [else
+    (let1 stmt 
+        (guard (e [else
                          (error <sqlite3-error>
                                 :message (condition-ref e 'message))])
-                (sqlite3-prepare db stmt query))
+          (sqlite3-prepare db query))
+      (unless stmt
         (let1 msg (sqlite3-last-errmsg db)
           (errorf
            <sqlite3-error> :error-message msg
