@@ -57,8 +57,11 @@
    [(== (-> db core) NULL)
     (return FALSE)]
    [else
-    ;; TODO  check return value
-    (sqlite3_close (-> db core))
+	;; TODO cleanup all of unfinished statements
+    ;; (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
+	;;   (Scm_Error "Failed to close database (%s)"
+	;; 			 (sqlite3_errmsg (-> db core))))
+	(sqlite3_close (-> db core))
     (set! (-> db core) NULL)
     (set! (-> db terminated) TRUE)
     (return TRUE)]))
@@ -69,8 +72,9 @@
    [(== (-> stmt core) NULL)
     (return FALSE)]
    [else
-    ;; TODO check return value
-    (sqlite3_finalize (-> stmt core))
+    (unless (== (sqlite3_finalize (-> stmt core)) SQLITE_OK)
+	  (Scm_Error "Failed to close statement (%s)"
+				 (sqlite3_errmsg (-> stmt db core))))
     (set! (-> stmt core) NULL)
     (return TRUE)]))
 
@@ -168,7 +172,6 @@
 	(check-statement stmt)
 
 	(set! rc (sqlite3_step (-> stmt core)))
-	;;TODO test.scm all path of this code block
 
 	(case rc
 	  [(SQLITE_ROW)
