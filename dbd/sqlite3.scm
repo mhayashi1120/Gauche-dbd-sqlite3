@@ -52,6 +52,11 @@
 (define-condition-type <sqlite3-error> <dbi-error> #f
   (error-code))
 
+(define-macro (with-guard . body)
+  `(guard (e [else (error <sqlite3-error>
+                         :message (condition-ref e 'message))])
+     ,@body))
+
 (define-method dbi-make-connection ((d <sqlite3-driver>)
                                     (options <string>)
                                     (option-alist <list>)
@@ -62,24 +67,15 @@
                  (else (assoc-ref option-alist "db" #f)))]
          [conn (make <sqlite3-connection>
                  :filename db-name)])
-    (guard (e [else (error <sqlite3-error> :message "SQLite3 open failed")])
-      (slot-set! conn '%handle (sqlite3-open db-name)))
+    (slot-set! conn '%handle
+               (with-guard (sqlite3-open db-name)))
     conn))
 
 (define-method dbi-execute-using-connection
   ((c <sqlite3-connection>) (q <dbi-query>) params)
 
   (define (prepare db query)
-    (let1 stmt 
-        (guard (e [else
-                         (error <sqlite3-error>
-                                :message (condition-ref e 'message))])
-          (sqlite3-prepare db query))
-      (unless stmt
-        (let1 msg (sqlite3-last-errmsg db)
-          (errorf
-           <sqlite3-error> :error-message msg
-           "SQLite3 prepare failed: ~a" msg)))
+    (let1 stmt (sqlite3-prepare db query)
       (make <sqlite3-result-set>
         :db db
         :handle stmt
@@ -101,9 +97,8 @@
   (not (sqlite3-statement-closed? (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
-  (guard (e (else (error <sqlite3-error>
-                         :message (condition-ref e 'message))))
-    (sqlite3-db-close (slot-ref c '%handle))))
+  (with-guard
+   (sqlite3-db-close (slot-ref c '%handle))))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
   (sqlite3-statement-close (slot-ref result-set '%handle)))
@@ -152,12 +147,8 @@
 (define (statement-next rset)
 
   (define (next)
-    (guard (e [else
-               (let1 msg (sqlite3-last-errmsg (slot-ref rset '%db))
-                 (errorf
-                  <sqlite3-error> :error-message msg
-                  "SQLite3 step failed: ~a" msg))])
-      (sqlite3-statement-step (slot-ref rset '%handle))))
+    (with-guard
+     (sqlite3-statement-step (slot-ref rset '%handle))))
 
   (cond
    [(sqlite3-statement-end? (slot-ref rset '%handle))
@@ -188,9 +179,10 @@
   (let1 tran (apply dbi-begin-transaction conn flags)
     (guard (e [else
                (guard (e2 [else
+                           ;; FATAL: failed to rollback
                            (raise (make-compound-condition e e2))])
-                 (dbi-rollback tran)
-                 (raise e))])
+                 (dbi-rollback tran))
+               (raise e)])
       (begin0
         (proc tran)
         (dbi-commit tran)))))

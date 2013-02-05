@@ -18,6 +18,17 @@
    identity
    (dbi-do connection sql)))
 
+(define (cleanup-test)
+  (define (remove-file file)
+    (when (file-exists? file)
+      (sys-unlink file)))
+  (remove-file "test.db")
+  (remove-file "test.db-journal")
+  (remove-file "てすと.db")
+  (remove-file "unacceptable.db"))
+
+(cleanup-test)
+
 (test* "dbi-connect"
        <sqlite3-connection>
        (let1 c (dbi-connect "dbi:sqlite3:test.db")
@@ -213,6 +224,10 @@
        '(#(403))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403);"))
 
+(test* "Checking compound statements getting 1st select and 2nd has syntax error"
+       (test-error <error>)
+       (select-rows "SELECT 1; SELECT;"))
+
 ;; TODO
 (test* "Checking multiple SELECT statements"
        '(#(403) #(301 #f) #(302 #f))
@@ -235,13 +250,24 @@
 		#t
 		(dbi-close connection))
 
-(test* "Check connection was closed"
+(test* "Checking connection was closed"
 		#f
 		(dbi-open? connection))
 
+(test* "Checking failed to open db"
+       (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+       (begin
+         (with-output-to-file "unacceptable.db"
+           (^()))
+         (sys-chmod "unacceptable.db" #o000)
+         (dbi-connect "dbi:sqlite3:unacceptable.db")))
+
+(test* "Checking multibyte filename"
+       #t
+       (let1 c (dbi-connect "dbi:sqlite3:てすと.db")
+         (dbi-open? c)))
+       
+
 (test-end)
 
-(sys-unlink "test.db")
-(and (file-exists? "test.db-journal")
-     (sys-unlink "test.db-journal"))
-
+(cleanup-test)

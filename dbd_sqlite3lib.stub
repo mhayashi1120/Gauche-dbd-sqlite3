@@ -43,14 +43,13 @@
     (Scm_Error "<sqlite3-statement> already closed")))
 
 (define-cfn prepare-statement (db::ScmSqlite3Db* sql::(const char*) stmt::ScmSqlite3Stmt*)
-  :: int :static
+  :: void :static
   (let* ([handle::sqlite3_stmt* NULL]
          [tail::(const char*)])
     (unless (== (sqlite3_prepare_v2 (-> db core) sql -1 (& handle) (& tail)) SQLITE_OK)
-      (return FALSE))
+      (Scm_Error "Failed to prepare statement (%s)" (sqlite3_errmsg (-> db core))))
     (set! (-> stmt core) handle)
-    (set! (-> stmt tail) tail)
-    (return TRUE)))
+    (set! (-> stmt tail) tail)))
 
 (define-cfn db-close (db::ScmSqlite3Db*)
   :: int :static
@@ -70,7 +69,7 @@
    [(== (-> stmt core) NULL)
     (return FALSE)]
    [else
-    ;; TODO  check return value
+    ;; TODO check return value
     (sqlite3_finalize (-> stmt core))
     (set! (-> stmt core) NULL)
     (return TRUE)]))
@@ -145,14 +144,11 @@
   (let* ([stmt::ScmSqlite3Stmt* (make-statement)]
 		 [query::(const char*) (Scm_GetStringConst sql)])
     (check-db db)
-    (cond
-     [(prepare-statement db query stmt)
-      (set! (-> stmt db) db)
-      (set! (-> stmt executed) TRUE)
-      (set! (-> stmt terminated) FALSE)
-      (result stmt)]
-     [else
-      (result stmt)])))
+	(prepare-statement db query stmt)
+	(set! (-> stmt db) db)
+	(set! (-> stmt executed) TRUE)
+	(set! (-> stmt terminated) FALSE)
+	(result stmt)))
 
 (define-cproc sqlite3-statement? (obj) :: <boolean>
   (result (SCM_SQLITE3_STMT_P obj)))
@@ -187,9 +183,7 @@
 
 	   ;; stmt->tail has rest of multiple statements.
 	   (while (and (-> stmt tail) (* (-> stmt tail)))
-		 (unless (prepare-statement (-> stmt db) (-> stmt tail) stmt)
-		   (Scm_Error "sqlite3_prepare_v2 failed while handling compound statement."))
-
+		 (prepare-statement (-> stmt db) (-> stmt tail) stmt)
 
 		 (set! rc (sqlite3_step (-> stmt core)))
 
