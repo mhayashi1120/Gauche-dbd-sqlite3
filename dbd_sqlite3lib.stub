@@ -20,12 +20,6 @@
 (define-type <sqlite3-statement> "ScmSqlite3Stmt *" #f
   "SCM_SQLITE3_STMT_P" "SQLITE3_STMT_HANDLE_UNBOX" "SQLITE3_STMT_HANDLE_BOX")
 
-;; (define-cproc bind-sqlite-parameters (stmt::<sqlite3-statement> params::<list>)
-;;   (expr <sqlite3-statement> "Sqlite3StmtBind(stmt, params)"))
-
-;; (define-cproc sqlite3-reset-statement (stmt::<sqlite3-statement>) :: <void>
-;;   (sqlite3_reset (-> stmt core)))
-
 ;;;
 ;;; C functions
 ;;;
@@ -47,7 +41,8 @@
   (let* ([handle::sqlite3_stmt* NULL]
          [tail::(const char*)])
     (unless (== (sqlite3_prepare_v2 (-> db core) sql -1 (& handle) (& tail)) SQLITE_OK)
-      (Scm_Error "Failed to prepare statement (%s)" (sqlite3_errmsg (-> db core))))
+      (Scm_Error "Failed to prepare statement (%s)"
+				 (sqlite3_errmsg (-> db core))))
     (set! (-> stmt core) handle)
     (set! (-> stmt tail) tail)))
 
@@ -89,6 +84,32 @@
   (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
   (let* ([stmt::ScmSqlite3Stmt* (SQLITE3_STMT_HANDLE_UNBOX obj)])
     (stmt-close stmt)))
+
+(define-cfn bind-index-param (stmt::sqlite3_stmt* index::int value::ScmObj)
+  (cond
+   [(or (SCM_INTP value)
+		(SCM_BIGNUMP value))
+	;; Not consider about overflow
+	;; beyond the max/min value truncate to max/min int64 value
+	(sqlite3_bind_int64 stmt index (Scm_GetInteger64 value))]
+   [(SCM_REALP value)
+	(sqlite3_bind_double stmt index (Scm_GetDouble value))]
+   [(SCM_U8VECTORP value)
+	(sqlite3_bind_blob stmt index (SCM_U8VECTOR_ELEMENTS value)
+					   ;;TODO fifth arg
+					   (SCM_U8VECTOR_SIZE value) SQLITE_STATIC)]
+   [(SCM_STRINGP value)
+	(sqlite3_bind_text stmt index (Scm_GetStringConst (SCM_STRING value))
+					   ;;TODO fifth arg
+					   (SCM_STRING_SIZE value) SQLITE_STATIC)]
+   [(SCM_FALSEP value)
+	(sqlite3_bind_null stmt index)]
+   [else
+	(Scm_Error "Not a supported scheme object")]))
+
+(define-cfn bind-name-param (stmt::sqlite3_stmt* name::(const char*) value::ScmObj)
+  (let* ([index::int (sqlite3_bind_parameter_index stmt name)])
+	(bind-index-param stmt index value)))
 
 (define-cfn make-row-vector (stmt::ScmSqlite3Stmt*)
   :: ScmObj :static
@@ -181,8 +202,7 @@
 	   ;; returned from NO result set.
 	   ;; continue until result set is returned.
 
-	   ;; /* TODO  */
-	   ;; /* multiple SELECT statement */
+	   ;; TODO multiple SELECT statement
 
 	   ;; stmt->tail has rest of multiple statements.
 	   (while (and (-> stmt tail) (* (-> stmt tail)))
@@ -215,6 +235,23 @@
            (set! res (Scm_Cons val res))))
     (set! res (Scm_Reverse res))
     (result res)))
+
+(define-cproc sqlite3-bind-parameters (stmt::<sqlite3-statement> params::<list>)
+  (let* ([handle::(sqlite3_stmt*) (-> stmt core)])
+	;;TODO check return
+	(sqlite3_reset handle)
+	(dolist (pair params) 
+	  (unless (SCM_PAIRP pair)
+		(Scm_Error "Invalid params"))
+	  (let* ([key::ScmObj (SCM_CAR pair)]
+			 [value::ScmObj (SCM_CDR pair)])
+		(cond
+		 [(SCM_STRINGP key)
+		  (bind-name-param handle (Scm_GetStringConst (SCM_STRING key)) value)]
+		 [(SCM_UINTEGERP key)
+		  (bind-index-param handle (Scm_GetIntegerU key) value)]
+		 [else
+		  (Scm_Error "Not a supported param key")])))))
 
 (define-cproc sqlite3-escape-string (value::<string>)
   (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]

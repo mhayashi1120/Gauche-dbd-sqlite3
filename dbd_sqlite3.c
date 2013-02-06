@@ -46,23 +46,6 @@ extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
 
  */
 
-/* /\* params: Alist key is name of param, value is gauche object. *\/ */
-/* void Sqlite3StmtBind(ScmSqlite3Stmt * stmt, ScmString * name, ScmObject * value) */
-/* { */
-/*     int index; */
-/*     char realName; */
-/*     /\* TODO *\/ */
-/*     /\* http://www.sqlite.org/c3ref/bind_parameter_name.html */
-/*      * the initial ":" or "$" or "@" or "?" is included as part of the name */
-/*     *\/ */
-/*     realName = Scm_GetStringConst(name); */
-/*     index = sqlite3_bind_parameter_index(stmt->core, realName); */
-
-/*     /\* Scm_GetInteger64(value); *\/ */
-/*     /\* Scm_GetStringConst(value); *\/ */
-/*     /\* Scm_GetDouble(value); *\/ */
-/* } */
-
 /*
  * Module functions.
  */

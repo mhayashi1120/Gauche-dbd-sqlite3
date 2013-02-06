@@ -13,10 +13,15 @@
 
 (define connection #f)
 
-(define (select-rows sql)
+(define (select-rows sql . params)
   (map
    identity
-   (dbi-do connection sql)))
+   (apply dbi-do connection sql '() params)))
+
+(define (select-rows2 sql . params)
+  (map
+   identity
+   (apply dbi-do connection sql '(:pass-through #t) params)))
 
 (define (cleanup-test)
   (define (remove-file file)
@@ -232,6 +237,38 @@
 (test* "Checking multiple SELECT statements"
        '(#(403) #(301 #f) #(302 #f))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403); SELECT id, name FROM tbl1 WHERE id IN (301, 302)"))
+
+(test* "Checking parameter bindings"
+       '(#("abcdeあ" #xffff #x7fffffffffffffff 0.99 #f))
+       (select-rows "SELECT ?, ?, ?, ?, ?;"
+                    "abcdeあ" #xffff #x7fffffffffffffff 0.99 #f))
+
+(test* "Checking named parameter bindings (pass-through)"
+       '(#("abcdeあ" #xffff #x7fffffffffffffff #x-8000000000000000 #u8(0 1 15 255) 0.99 #f
+           #x7fffffffffffffff #x-8000000000000000))
+       (select-rows2 
+        (string-append
+         "SELECT "
+         " :string_multibyte1, :small_int, :bigpositive_num, :bignegative_num"
+         ", :u8vector, :float, :null1"
+         ", :overflow_positive_num, :overflow_negative_num"
+         )
+        :string_multibyte1 "abcdeあ"
+        :small_int #xffff
+        :bigpositive_num #x7fffffffffffffff
+        :overflow_positive_num #x8000000000000000
+        :bignegative_num #x-8000000000000000
+        :overflow_negative_num #x-8000000000000001
+        :u8vector #u8(0 1 15 255)
+        :float 0.99
+        :null1 #f))
+
+(test* "Checking named parameter bindings 2 (pass-through)"
+       '(#(1 2 3 4 5))
+       (select-rows2 
+        (string-append
+         "SELECT :a1, @a2, $a3, ?4, ?")
+        :a1 1 :@a2 2 :$a3 3 :4 4 :? 5))
 
 ;; FIXME
 (test* "Checking VACUUM is not working."

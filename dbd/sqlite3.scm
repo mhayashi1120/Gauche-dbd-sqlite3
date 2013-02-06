@@ -31,6 +31,59 @@
 (define (sqlite3-last-id conn)
   (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
 
+;; SQLite3 accept `:' `@' `$' as named parameter prefix.
+;; default named parameter is `:' prefix, same as scheme constant symbol prefix.
+;; http://www.sqlite.org/c3ref/bind_blob.html
+(define (sqlite3-keyword-name keyword)
+  (let ([name (keyword->string keyword)])
+    (cond
+     [(#/^[@$]/ name)
+      ;; @VVV, $VVV
+      name]
+     [(#/^[0-9]+$/ name)
+      ;; ?NNN
+      #`"?,|name|"]
+     [(string=? "?" name)
+      ;; no named parameter
+      #f]
+     [else
+      ;; :VVV 
+      #`":,|name|"])))
+
+;; params = (:a1 1 :@a2 2 :$a3 3 :4 4 :? 5)
+;; sql = "select :a1, @a2, $a3, ?4, ?"
+;; this return #(1 2 3 4 5) row
+(define (keywords->params keywords)
+  (let loop ([keys keywords]
+             [index 1])
+    (cond
+     [(null? keys)
+      '()]
+     [else
+      (unless (>= (length keys) 2)
+        (error "keyword list not even" keys))
+      (let ([key (car keys)]
+            [val (match (cadr keys)
+                   ;; text
+                   [(? string? x) x]
+                   ;; integer
+                   [(or (? fixnum? x)
+                        (? bignum? x)) x]
+                   ;; float
+                   [(? real? x) x]
+                   ;; blob
+                   [(? u8vector? x) x]
+                   ;; NULL
+                   [#f #f]
+                   ;; handle as text
+                   [x (x->string x)])])
+        (unless (keyword? key)
+          (error "Invalid keyword" key))
+        (let1 keyname (sqlite3-keyword-name key)
+          (cons
+           (cons (or keyname index) val)
+           (loop (cddr keys) (+ index 1)))))])))
+
 ;;;
 ;;; DBI interfaces
 ;;;
@@ -74,18 +127,31 @@
 (define-method dbi-execute-using-connection
   ((c <sqlite3-connection>) (q <dbi-query>) params)
 
-  (define (prepare db query)
-    (let1 stmt (sqlite3-prepare db query)
-      (make <sqlite3-result-set>
-        :db db
-        :handle stmt
-        :field-names (sqlite3-statement-column-names stmt))))
+  (let* ([db (slot-ref c '%handle)]
+         [prepared (slot-ref q 'prepared)]
+         [query (if (string? prepared)
+                  prepared
+                  (apply prepared params))]
+         [stmt (sqlite3-prepare db query)])
 
-  (let* ([query-string (apply (slot-ref q 'prepared) params)]
-         [result (prepare (slot-ref c '%handle) query-string)])
-    ;; execute first step of this statement
-    (slot-set! result '%stream (statement-next result))
-    result))
+    (when (string? prepared)
+      (sqlite3-bind-parameters stmt (keywords->params params)))
+
+    (let1 result (make <sqlite3-result-set>
+                   :db db
+                   :handle stmt
+                   :field-names (sqlite3-statement-column-names stmt))
+      ;; execute first step of this statement
+      (slot-set! result '%stream (statement-next result))
+      result)))
+
+(define-method dbi-prepare ((c <sqlite3-connection>) (sql <string>) . args)
+  (let-keywords args ((pass-through #f))
+    (let1 prepared (if pass-through
+                     sql
+                     (dbi-prepare-sql c sql))
+      (make <dbi-query> :connection c
+            :prepared prepared))))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
   (sqlite3-escape-string str))
