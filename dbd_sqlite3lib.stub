@@ -96,12 +96,14 @@
 	(sqlite3_bind_double stmt index (Scm_GetDouble value))]
    [(SCM_U8VECTORP value)
 	(sqlite3_bind_blob stmt index (SCM_U8VECTOR_ELEMENTS value)
-					   ;;TODO fifth arg
-					   (SCM_U8VECTOR_SIZE value) SQLITE_STATIC)]
+					   (SCM_U8VECTOR_SIZE value)
+					   ;; keep allocated memory
+					   SQLITE_STATIC)]
    [(SCM_STRINGP value)
 	(sqlite3_bind_text stmt index (Scm_GetStringConst (SCM_STRING value))
-					   ;;TODO fifth arg
-					   (SCM_STRING_SIZE value) SQLITE_STATIC)]
+					   (SCM_STRING_SIZE value)
+					   ;; keep allocated memory
+					   SQLITE_STATIC)]
    [(SCM_FALSEP value)
 	(sqlite3_bind_null stmt index)]
    [else
@@ -238,9 +240,10 @@
 
 (define-cproc sqlite3-bind-parameters (stmt::<sqlite3-statement> params::<list>)
   (let* ([handle::(sqlite3_stmt*) (-> stmt core)])
-	;;TODO check return
-	(sqlite3_reset handle)
-	(dolist (pair params) 
+	;; may fail if stmt is being processed.
+	(unless (== (sqlite3_reset handle) SQLITE_OK)
+	  (Scm_Error "sqlite3_reset failed"))
+	(dolist (pair params)
 	  (unless (SCM_PAIRP pair)
 		(Scm_Error "Invalid params"))
 	  (let* ([key::ScmObj (SCM_CAR pair)]

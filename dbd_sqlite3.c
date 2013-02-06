@@ -5,47 +5,6 @@
 
 extern void Scm_Init_dbd_sqlite3lib(ScmModule*);
 
-/* 
- -  sqlite3_reset()
- - int sqlite3_bind_blob(sqlite3_stmt*, int, const void*, int n, void(*)(void*));
-   => gauche u8vector
-    
- - int sqlite3_bind_double(sqlite3_stmt*, int, double);
-   => gauche float
-
- - int sqlite3_bind_int(sqlite3_stmt*, int, int);
- - int sqlite3_bind_int64(sqlite3_stmt*, int, sqlite3_int64);
-   => gauche int (bignum)
-
- - int sqlite3_bind_null(sqlite3_stmt*, int);
-   => gauche #f
-
- - int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int n, void(*)(void*));
- - int sqlite3_bind_text16(sqlite3_stmt*, int, const void*, int, void(*)(void*));
-   => gauche text (TODO incomplete string)
-
- - int sqlite3_bind_value(sqlite3_stmt*, int, const sqlite3_value*);
-   => TODO no need to implement?
-
- - int sqlite3_bind_zeroblob(sqlite3_stmt*, int, int n);
-   => TODO ??? empty vector?
-
-
- - 5 type of bind parameter is supported native sqlite3
-
-    + ?
-    + ?NNN
-    + :VVV
-    + @VVV
-    + $VVV
-
-   but only support a named param `?' suffixed index param is not supported.
-   TODO  how to encode parameter name? sqlite3 command seems to accept multibyte string.
-
- - sqlite3_bind_parameter_index()
-
- */
-
 /*
  * Module functions.
  */
