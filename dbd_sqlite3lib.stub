@@ -86,6 +86,7 @@
     (stmt-close stmt)))
 
 (define-cfn bind-index-param (stmt::sqlite3_stmt* index::int value::ScmObj)
+  :: void :static
   (cond
    [(or (SCM_INTP value)
 		(SCM_BIGNUMP value))
@@ -110,6 +111,7 @@
 	(Scm_Error "Not a supported scheme object")]))
 
 (define-cfn bind-name-param (stmt::sqlite3_stmt* name::(const char*) value::ScmObj)
+  :: void :static
   (let* ([index::int (sqlite3_bind_parameter_index stmt name)])
 	(bind-index-param stmt index value)))
 
@@ -152,10 +154,14 @@
 ;;; function call from scheme
 ;;;
 
-(define-cproc sqlite3-open (path::<string>) :: <sqlite3-db>
+(define-cproc sqlite3-open (path::<string> flags::<int32>) :: <sqlite3-db>
   (let* ([db::ScmSqlite3Db* (SCM_MALLOC (sizeof ScmSqlite3Db))]
-         [cpath::(const char*) (Scm_GetStringConst path)])
-    (unless (== (sqlite3_open cpath (& (-> db core))) SQLITE_OK)
+         [cpath::(const char*) (Scm_GetStringConst path)]
+		 ;; sqlite3_open use this as flags.
+		 [def_flags::int (logior SQLITE_OPEN_READWRITE SQLITE_OPEN_CREATE)])
+    (unless (== (sqlite3_open_v2 cpath (& (-> db core))
+								 (logior flags def_flags)
+								 NULL) SQLITE_OK)
       (Scm_Error "Failed to open database %s" cpath))
     (set! (-> db terminated) FALSE)
     (result db)))

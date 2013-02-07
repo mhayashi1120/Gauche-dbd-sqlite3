@@ -119,9 +119,12 @@
                  (((maybe-db . #t) . rest) maybe-db)
                  (else (assoc-ref option-alist "db" #f)))]
          [conn (make <sqlite3-connection>
-                 :filename db-name)])
+                 :filename db-name)]
+         ;; SQLITE_OPEN_URI is not yet implemented at least 3.7.3
+         ;; 
+         [flags #x40])
     (slot-set! conn '%handle
-               (with-guard (sqlite3-open db-name)))
+               (with-guard (sqlite3-open db-name flags)))
     conn))
 
 (define-method dbi-execute-using-connection
