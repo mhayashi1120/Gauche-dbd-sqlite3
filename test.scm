@@ -7,6 +7,7 @@
 (use dbi)
 (use dbd.sqlite3)
 (use gauche.collection)
+(use gauche.version)
 (test-module 'dbd.sqlite3)  ;; This checks the exported symbols are indeed bound.
 
 ;; Normal operation test
@@ -123,23 +124,48 @@
                (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))
          (select-rows "SELECT id FROM tbl1 WHERE id IN (103, 104)")))
 
+;; http://www.sqlite.org/changes.html
+
 ;; See the http://www.sqlite.org/lang_transaction.html ROLLBACK section.
-(test* "Checking transaction unable rollback"
-       '(#(201))
-       (begin
+(cond
+ [(version<? (sqlite3-libversion) "3.7.11")
+  (test* "Checking transaction unable rollback"
+         '(#(201))
          ;; Open pending query
-         (dbi-do connection "SELECT 1 AS FOO;")
-         (guard (e (else (print (string-join
-                                 (map
-                                  (cut condition-ref <> 'message)
-                                  (slot-ref e '%conditions))
-                                 ", "))))
-           (call-with-transaction connection
-             (lambda (tran)
-               (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
-               ;; non existent table
-               (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
-         (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))
+         (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
+           (guard (e (else (print (string-join
+                                   (map
+                                    (cut condition-ref <> 'message)
+                                    (slot-ref e '%conditions))
+                                   ", "))))
+             (call-with-transaction connection
+               (lambda (tran)
+                 (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+                 ;; non existent table
+                 (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+           (dbi-close pending-rset)
+           (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))]
+ [else
+  ;; 2012 March 20 (3.7.11)
+  ;; Pending statements no longer block ROLLBACK. Instead, the pending
+  ;; statement will return SQLITE_ABORT upon next access after the
+  ;; ROLLBACK.
+  (test* "Checking transaction unable rollback"
+         (list () (with-module dbd.sqlite3 <sqlite3-error>))
+         ;; Open pending query
+         (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
+           (guard (e (else (print (condition-ref e 'message))))
+             (call-with-transaction connection
+               (lambda (tran)
+                 (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+                 ;; non existent table
+                 (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+           (list
+           (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")
+           (guard (e [else (class-of e)])
+             (call-with-iterator pending-rset
+               (lambda (end? next)
+                 (next)))))))])
 
 (test* "Checking full bit number insertion"
        '(#(-1))
@@ -270,10 +296,23 @@
          "SELECT :a1, @a2, $a3, ?4, ?")
         :a1 1 :@a2 2 :$a3 3 :4 4 :? 5))
 
-;; FIXME
-(test* "Checking VACUUM is not working."
-       (test-error <error>)
-       (dbi-do connection "VACUUM"))
+(cond
+ [(version>? (sqlite3-libversion) "3.7.15")
+  (test* "Checking VACUUM is not working when there is pending statement."
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+         (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
+           (guard (e [else
+                      (print (condition-ref e 'message))
+                      (dbi-close pending-rset)
+                      (raise e)])
+             (dbi-do connection "VACUUM"))))
+  (test* "Checking VACUUM is working."
+         '()
+         (map (^x x) (dbi-do connection "VACUUM;")))]
+ [else
+  (test* "Checking VACUUM is not working."
+         (test-error <error>)
+         (dbi-do connection "VACUUM"))])
 
 (test* "Checking dbi-tables"
        '("tbl1" "tbl2")

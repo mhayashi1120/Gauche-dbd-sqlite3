@@ -154,6 +154,9 @@
 ;;; function call from scheme
 ;;;
 
+(define-cproc sqlite3-version ()  :: <const-cstring>
+  (result (sqlite3_libversion)))
+
 (define-cproc sqlite3-open (path::<string> flags::<int32>) :: <sqlite3-db>
   (let* ([db::ScmSqlite3Db* (SCM_MALLOC (sizeof ScmSqlite3Db))]
          [cpath::(const char*) (Scm_GetStringConst path)]
@@ -225,14 +228,16 @@
 		   ;; Successfully finished non result statement.
 		   ]
 		  [else
-		   (Scm_Error "sqlite3_step failed: %d" rc)]))
+		   (Scm_Error "sqlite3_step failed: %s"
+					  (sqlite3_errmsg (-> stmt db core)))]))
 
 	   (set! (-> stmt terminated) TRUE)
 	   (result SCM_FALSE)]
 	  [else
 
 	   ;; http://www.sqlite.org/c3ref/c_abort.html
-	   (Scm_Error "sqlite3_step failed: %d" rc)])))
+	   (Scm_Error "sqlite3_step failed: %s"
+				  (sqlite3_errmsg (-> stmt db core)))])))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
   (let* ([num::int (sqlite3_column_count (-> stmt core))]

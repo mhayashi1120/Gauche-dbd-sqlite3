@@ -11,7 +11,7 @@
    <sqlite3-result-set>
    sqlite3-error-message
    sqlite3-table-columns
-   sqlite3-last-id
+   sqlite3-last-id sqlite3-libversion
    ))
 (select-module dbd.sqlite3)
 
@@ -30,6 +30,9 @@
 
 (define (sqlite3-last-id conn)
   (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
+
+(define (sqlite3-libversion)
+  (sqlite3-version))
 
 ;; SQLite3 accept `:' `@' `$' as named parameter prefix.
 ;; default named parameter is `:' prefix, same as scheme constant symbol prefix.
