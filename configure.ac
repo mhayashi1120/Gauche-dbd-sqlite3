@@ -19,8 +19,8 @@ libraries installed in non-standard places. ]),
   [
     case $with_sqlite3 in
       *)
-        LDFLAGS="-L$with_sqlite3/lib"
-        CPPFLAGS="-I$with_sqlite3/include" 
+        LDFLAGS="$LDFLAGS -L$with_sqlite3/lib"
+        CPPFLAGS="$CPPFLAGS -I$with_sqlite3/include" 
         ;;
     esac
   ])

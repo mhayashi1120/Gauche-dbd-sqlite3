@@ -116,13 +116,14 @@
                                     . args)
   (let* ([db-name
           (match option-alist
-                 (((maybe-db . #t) . rest) maybe-db)
-                 (else (assoc-ref option-alist "db" #f)))]
+            [((maybe-db . #t) . rest) maybe-db]
+            [else (assoc-ref option-alist "db" #f)])]
          [conn (make <sqlite3-connection>
                  :filename db-name)]
          ;; SQLITE_OPEN_URI (0x40) is not yet implemented at least 3.7.3
          ;; Probablly that will be the default value in future release.
          ;; http://www.sqlite.org/uri.html
+         ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
          [flags #x40])
     (slot-set! conn '%handle
                (with-guard (sqlite3-open db-name flags)))
