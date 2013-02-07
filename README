@@ -3,7 +3,6 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
 [Requirements]
 
-- pkg-config
 - GCC
 - Gauche 0.9.2 or later (http://www.practical-scheme.net/gauche/)
 - SQLite 3.7.3 or later (http://www.sqlite.org/)
