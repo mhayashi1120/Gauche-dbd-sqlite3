@@ -115,23 +115,24 @@
   (let* ([index::int (sqlite3_bind_parameter_index stmt name)])
 	(bind-index-param stmt index value)))
 
-(define-cfn MakeBignumFromInt64 (int64::(sqlite3_int64))
+(define-cfn MakeBignumFromInt64 (i64::(sqlite3_int64))
+  :: ScmObj :static
   (.if "SIZEOF_LONG == 4"
 	   (cond
-		[(> int64 LONG_MAX) 
-		 (let* ([values::(long [2])])
-		   (set! (aref values 0) (logand int64 #xffffffff))
-		   (set! (aref values 1) (ash int64 (- (* (sizeof long) 8))))
-		   (Scm_MakeBignumFromUIArray 1 values (?: (> (aref values 1) 0) 2 1)))]
-		[(< int64 LONG_MIN)
-		 (let* ([values::(long [2])])
-		   (set! int64 (- int64))
-		   (set! (aref values 0) (logand int64 #xffffffff))
-		   (set! (aref values 1) (ash int64 (- (* (sizeof long) 8))))
+		[(> i64 LONG_MAX) 
+		 (let* ([values::(.array long (2))])
+		   (set! (aref values 0) (logand i64 #xffffffff))
+		   (set! (aref values 1) (>> i64 (* (sizeof long) 8)))
+		   (return (Scm_MakeBignumFromUIArray 1 values (?: (> (aref values 1) 0) 2 1))))]
+		[(< i64 LONG_MIN)
+		 (let* ([values::(.array long (2))])
+		   (set! i64 (- i64))
+		   (set! (aref values 0) (logand i64 #xffffffff))
+		   (set! (aref values 1) (>> i64 (* (sizeof long) 8)))
 		   (Scm_MakeBignumFromUIArray -1 values (?: (> (aref values 1) 0) 2 1)))]
 		[else
-		 (Scm_MakeInteger int64)])
-	   (Scm_MakeBignumFromSI int64)))
+		 (return (Scm_MakeInteger i64))])
+	   (return (Scm_MakeBignumFromSI i64))))
 
 (define-cfn make-row-vector (stmt::ScmSqlite3Stmt*)
   :: ScmObj :static
