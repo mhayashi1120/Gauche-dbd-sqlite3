@@ -306,8 +306,9 @@
          ", ?"
          ;; keyword has ? prefix
          ", ?6"
-         ", :a4")
-        :a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a4 7))
+         ;; keyword has : prefix
+         ", :a7")
+        :a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a7 7))
 
 (cond
  [(version>? (sqlite3-libversion) "3.7.15")

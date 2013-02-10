@@ -55,9 +55,9 @@
       ;; :VVV 
       #`":,|name|"])))
 
-;; params = (:a1 1 :@a2 2 :$a3 3 :4 4 :? 5)
-;; sql = "select :a1, @a2, $a3, ?4, ?"
-;; this return #(1 2 3 4 5) row
+;; params = (:a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a7 7)
+;; sql = "select :a1, @a2, $a3, ?4, ?, ?6, :a7"
+;; this return #(1 2 3 4 5 6 7) row
 (define (keywords->params keywords)
   (let loop ([keys keywords]
              [index 1])
@@ -289,6 +289,7 @@
 ;;; Transaction interfaces
 ;;;
 
+;; http://www.sqlite.org/lang_transaction.html
 (define-class <sqlite3-transaction> (<dbi-transaction>)
   ())
 
