@@ -1,4 +1,5 @@
 (define-module dbd.sqlite3
+  (use gauche.version)
   (use dbi)
   (use gauche.uvector)
   (use util.list)
@@ -117,20 +118,38 @@
                                     (options <string>)
                                     (option-alist <list>)
                                     . args)
-  (let* ([db-name
-          (match option-alist
-            [((maybe-db . #t) . rest) maybe-db]
-            [else (assoc-ref option-alist "db" #f)])]
-         [conn (make <sqlite3-connection>
-                 :filename db-name)]
-         ;; SQLITE_OPEN_URI (0x40) is not yet implemented at least 3.7.3
-         ;; Probablly that will be the default value in future release.
-         ;; http://www.sqlite.org/uri.html
-         ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
-         [flags #x40])
-    (slot-set! conn '%handle
-               (with-guard (sqlite3-open db-name flags)))
-    conn))
+  (receive (db-name opt-alist)
+      (cond
+       [(assoc "db" option-alist) =>
+        ;; older version
+        (^p (values (cdr p) (delete p option-alist)))]
+       [else
+        ;; caller may misunderstand the URI parameter as options
+        ;; parse dsn 3rd section by myself.
+        (parse-connect-options options)])
+    (let* ([conn (make <sqlite3-connection>
+                   :filename db-name)]
+           [flags (logior
+                   (x->number (assoc-ref opt-alist "flags"))
+                   ;; SQLITE_OPEN_URI (0x40) is not yet implemented at least 3.7.3
+                   ;; Probablly that will be the default value in future release.
+                   ;; http://www.sqlite.org/uri.html
+                   ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
+                   #x40)])
+      (slot-set! conn '%handle
+                 (with-guard (sqlite3-open db-name flags)))
+      conn)))
+
+(define (parse-connect-options s)
+  (rxmatch-case s
+    [#/^([^;]+);(.*)$/ (#f db-name options)
+     (let1 alist (map (lambda (nv)
+                        (receive (n v) (string-scan nv "=" 'both)
+                          (if n (cons n v) (cons nv #t))))
+                      (string-split options #\;))
+       (values db-name alist))]
+    [else
+     (values s '())]))
 
 (define-method dbi-execute-using-connection
   ((c <sqlite3-connection>) (q <dbi-query>) params)
@@ -293,7 +312,7 @@
                "ROLLBACK TRANSACTION"))
 
 ;;;
-;;; dbi extensions TODO  URL
+;;; dbi extensions <http://www.kahua.org/show/dev/DBI#H-lowvragr
 ;;;
 
 (define-method dbi-tables ((conn <sqlite3-connection>))
@@ -307,8 +326,9 @@
 
 (define (do-select con sql proc . args)
   (let1 rset (apply dbi-do con sql args)
-    (begin0 (map proc rset)
-      (dbi-close rset))))
+    (unwind-protect
+     (map proc rset)
+     (dbi-close rset))))
 
 (define (do-one-time con sql . args)
   (let1 r (apply dbi-do con sql args)

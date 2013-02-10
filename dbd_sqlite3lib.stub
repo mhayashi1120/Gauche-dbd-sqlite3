@@ -138,7 +138,7 @@
              [(SQLITE_NULL)
               (set! value SCM_FALSE)]
              [else
-              (Scm_Error "unknown sqlite3_column_type")]))
+              (Scm_Error "unknown sqlite3_column_type (%d)" type)]))
          (Scm_VectorSet (SCM_VECTOR res) i value))
 
     (return res)))
@@ -253,7 +253,8 @@
   (let* ([handle::(sqlite3_stmt*) (-> stmt core)])
 	;; may fail if stmt is being processed.
 	(unless (== (sqlite3_reset handle) SQLITE_OK)
-	  (Scm_Error "sqlite3_reset failed"))
+	  (Scm_Error "sqlite3_reset failed (%s)"
+				 (sqlite3_errmsg (-> stmt db core))))
 	(dolist (pair params)
 	  (unless (SCM_PAIRP pair)
 		(Scm_Error "Invalid params"))

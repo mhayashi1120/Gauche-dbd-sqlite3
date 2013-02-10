@@ -293,7 +293,17 @@
        '(#(1 2 3 4 5))
        (select-rows2 
         (string-append
-         "SELECT :a1, @a2, $a3, ?4, ?")
+         "SELECT "
+         ;; : prefix
+         "  :a1"
+         ;; @ prefix
+         ", @a2"
+         ;; $ prefix
+         ", $a3"
+         ;; indexed parameter
+         ", ?4"
+         ;; anonymous parameter
+         ", ?")
         :a1 1 :@a2 2 :$a3 3 :4 4 :? 5))
 
 (cond

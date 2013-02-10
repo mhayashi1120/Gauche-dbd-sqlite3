@@ -17,7 +17,8 @@
     (when (file-exists? file)
       (sys-unlink file)))
   (remove-file "test2.db")
-  (remove-file "test2.db-journal"))
+  (remove-file "test2.db-journal")
+  (remove-file "file:test2.db?mode=memory"))
 
 (test* "dbi-connect" 
        <sqlite3-connection>

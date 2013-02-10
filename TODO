@@ -13,3 +13,4 @@ imitate sqlite3-ruby
 * mutex
 sqlite3_db_mutex
 
+* throw <sqlite3-error> all of c function
