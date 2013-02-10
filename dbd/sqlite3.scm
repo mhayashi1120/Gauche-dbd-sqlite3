@@ -246,7 +246,7 @@
     stream-null]))
 
 ;;;
-;;;TODO dbi extensions
+;;; dbi extensions (Experimental)
 ;;;
 
 ;;TODO isolation level

@@ -259,7 +259,6 @@
        (test-error (with-module dbd.sqlite3 <sqlite3-error>))
        (select-rows "SELECT 1; SELECT;"))
 
-;; TODO
 (test* "Checking multiple SELECT statements"
        '(#(403) #(301 #f) #(302 #f))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403); SELECT id, name FROM tbl1 WHERE id IN (301, 302)"))

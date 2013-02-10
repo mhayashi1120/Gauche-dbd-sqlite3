@@ -58,7 +58,7 @@ check : all
 	@rm -f test.log
 	$(GOSH) -I. test.scm > test.log
 
-early-check : check
+check2 : check
 	@rm -f test2.log
 	$(GOSH) -I. test2.scm >> test2.log
 
@@ -76,7 +76,7 @@ uninstall :
 
 clean :
 	$(GAUCHE_PACKAGE) compile --clean $(MODULE) $(sqlite3_SRCS)
-	rm -rf $(TARGET) $(GENERATED) *~ test.log so_locations
+	rm -rf $(TARGET) $(GENERATED) *~ test.log test2.log so_locations
 
 distclean : clean
 	rm -rf $(CONFIG_GENERATED)

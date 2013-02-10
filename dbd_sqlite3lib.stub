@@ -52,7 +52,7 @@
    [(== (-> db core) NULL)
     (return FALSE)]
    [else
-	;; TODO cleanup all of unfinished statements
+	;; TODO cleanup all of unfinished statements?
     ;; (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
 	;;   (Scm_Error "Failed to close database (%s)"
 	;; 			 (sqlite3_errmsg (-> db core))))
@@ -212,8 +212,6 @@
 	  [(SQLITE_DONE)
 	   ;; returned from NO result set.
 	   ;; continue until result set is returned.
-
-	   ;; TODO multiple SELECT statement
 
 	   ;; stmt->tail has rest of multiple statements.
 	   (while (and (-> stmt tail) (* (-> stmt tail)))
