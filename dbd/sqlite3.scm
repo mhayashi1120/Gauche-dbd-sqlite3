@@ -36,17 +36,18 @@
   (call-cproc sqlite3-version))
 
 ;; SQLite3 accept `:' `@' `$' as named parameter prefix.
-;; default named parameter is `:' prefix, same as scheme constant symbol prefix.
+;; This module's default named parameter is `:' prefix, same as
+;; scheme constant symbol prefix.
 ;; http://www.sqlite.org/c3ref/bind_blob.html
 (define (sqlite3-keyword-name keyword)
   (let ([name (keyword->string keyword)])
     (cond
-     [(#/^[@$]/ name)
+     [(#/^[@$:]/ name)
       ;; @VVV, $VVV
       name]
-     [(#/^[0-9]+$/ name)
+     [(#/^\??([0-9]+)$/ name) => 
       ;; ?NNN
-      #`"?,|name|"]
+      (^m #`"?,(m 1)")]
      [(string=? "?" name)
       ;; no named parameter
       #f]
@@ -127,7 +128,7 @@
            [flags (logior
                    (x->number (assoc-ref opt-alist "flags"))
                    ;; SQLITE_OPEN_URI (0x40) is not yet implemented at least 3.7.3
-                   ;; Probablly that will be the default value in future release.
+                   ;; Probablly that will be the default value of libsqlite3.
                    ;; http://www.sqlite.org/uri.html
                    ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
                    #x40)])

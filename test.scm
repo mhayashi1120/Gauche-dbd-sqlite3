@@ -290,7 +290,7 @@
         :null1 #f))
 
 (test* "Checking named parameter bindings 2 (pass-through)"
-       '(#(1 2 3 4 5))
+       '(#(1 2 3 4 5 6 7))
        (select-rows2 
         (string-append
          "SELECT "
@@ -303,8 +303,11 @@
          ;; indexed parameter
          ", ?4"
          ;; anonymous parameter
-         ", ?")
-        :a1 1 :@a2 2 :$a3 3 :4 4 :? 5))
+         ", ?"
+         ;; keyword has ? prefix
+         ", ?6"
+         ", :a4")
+        :a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a4 7))
 
 (cond
  [(version>? (sqlite3-libversion) "3.7.15")
