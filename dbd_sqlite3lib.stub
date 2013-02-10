@@ -119,7 +119,7 @@
   :: ScmObj :static
   (.if "SIZEOF_LONG == 4"
 	   (cond
-		[(> i64 LONG_MAX) 
+		[(> i64 LONG_MAX)
 		 (let* ([values::(.array long (2))])
 		   (set! (aref values 0) (logand i64 #xffffffff))
 		   (set! (aref values 1) (>> i64 (* (sizeof(long)) 8)))
