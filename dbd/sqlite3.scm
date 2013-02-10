@@ -27,13 +27,13 @@
              (^r (dbi-get-value r 1)) table))
 
 (define (sqlite3-error-message conn)
-  (sqlite3-last-errmsg (slot-ref conn '%handle)))
+  (call-cproc sqlite3-last-errmsg (slot-ref conn '%handle)))
 
 (define (sqlite3-last-id conn)
-  (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
+  (call-cproc sqlite3-last-insert-rowid (slot-ref conn '%handle)))
 
 (define (sqlite3-libversion)
-  (sqlite3-version))
+  (call-cproc sqlite3-version))
 
 ;; SQLite3 accept `:' `@' `$' as named parameter prefix.
 ;; default named parameter is `:' prefix, same as scheme constant symbol prefix.
@@ -109,11 +109,6 @@
 (define-condition-type <sqlite3-error> <dbi-error> #f
   (error-code))
 
-(define-macro (with-guard . body)
-  `(guard (e [else (error <sqlite3-error>
-                         :message (condition-ref e 'message))])
-     ,@body))
-
 (define-method dbi-make-connection ((d <sqlite3-driver>)
                                     (options <string>)
                                     (option-alist <list>)
@@ -137,7 +132,7 @@
                    ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
                    #x40)])
       (slot-set! conn '%handle
-                 (with-guard (sqlite3-open db-name flags)))
+                 (call-cproc sqlite3-open db-name flags))
       conn)))
 
 (define (parse-connect-options s)
@@ -159,15 +154,15 @@
          [query (if (string? prepared)
                   prepared
                   (apply prepared params))]
-         [stmt (sqlite3-prepare db query)])
+         [stmt (call-cproc sqlite3-prepare db query)])
 
     (when (string? prepared)
-      (sqlite3-bind-parameters stmt (keywords->params params)))
+      (call-cproc sqlite3-bind-parameters stmt (keywords->params params)))
 
     (let1 result (make <sqlite3-result-set>
                    :db db
                    :handle stmt
-                   :field-names (sqlite3-statement-column-names stmt))
+                   :field-names (call-cproc sqlite3-statement-column-names stmt))
       ;; execute first step of this statement
       (slot-set! result '%stream (statement-next result))
       result)))
@@ -181,20 +176,19 @@
             :prepared prepared))))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
-  (sqlite3-escape-string str))
+  (call-cproc sqlite3-escape-string str))
 
 (define-method dbi-open? ((c <sqlite3-connection>))
-  (not (sqlite3-db-closed? (slot-ref c '%handle))))
+  (not (call-cproc sqlite3-db-closed? (slot-ref c '%handle))))
 
 (define-method dbi-open? ((c <sqlite3-result-set>))
-  (not (sqlite3-statement-closed? (slot-ref c '%handle))))
+  (not (call-cproc sqlite3-statement-closed? (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
-  (with-guard
-   (sqlite3-db-close (slot-ref c '%handle))))
+  (call-cproc sqlite3-db-close (slot-ref c '%handle)))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
-  (sqlite3-statement-close (slot-ref result-set '%handle)))
+  (call-cproc sqlite3-statement-close (slot-ref result-set '%handle)))
 
 ;;;
 ;;; Relation interfaces
@@ -240,11 +234,10 @@
 (define (statement-next rset)
 
   (define (next)
-    (with-guard
-     (sqlite3-statement-step (slot-ref rset '%handle))))
+    (call-cproc sqlite3-statement-step (slot-ref rset '%handle)))
 
   (cond
-   [(sqlite3-statement-end? (slot-ref rset '%handle))
+   [(call-cproc sqlite3-statement-end? (slot-ref rset '%handle))
     stream-null]
    [(next) =>
     (^n (stream-delay (cons n (statement-next rset))))]
@@ -333,3 +326,8 @@
 (define (do-one-time con sql . args)
   (let1 r (apply dbi-do con sql args)
     (dbi-close r)))
+
+(define (call-cproc cproc . args)
+  (guard (e [else (error <sqlite3-error>
+                         :message (condition-ref e 'message))])
+    (apply cproc args)))

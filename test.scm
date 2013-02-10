@@ -256,7 +256,7 @@
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403);"))
 
 (test* "Checking compound statements getting 1st select and 2nd has syntax error"
-       (test-error <error>)
+       (test-error (with-module dbd.sqlite3 <sqlite3-error>))
        (select-rows "SELECT 1; SELECT;"))
 
 ;; TODO
@@ -321,7 +321,7 @@
          (map (^x x) (dbi-do connection "VACUUM;")))]
  [else
   (test* "Checking VACUUM is not working."
-         (test-error <error>)
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
          (dbi-do connection "VACUUM"))])
 
 (test* "Checking dbi-tables"
