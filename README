@@ -42,7 +42,7 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
 ** after 3.7.7, support URI filenames
 
-  1. this open "filename.db" at current-directory with in memory mode and NOMUTEX.
+  1. this open "filename.db" at current-directory with on memory mode and NOMUTEX.
 
   (dbi-make-connection (make <sqlite3-driver>) "file:filename.db?mode=memory;flags=32768" '())
 
