@@ -6,6 +6,11 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 - Gauche 0.9.2 or later (http://www.practical-scheme.net/gauche/)
 - SQLite 3.7.3 or later (http://www.sqlite.org/)
 
+[Developing Environment]
+
+- Gauche scheme shell, version 0.9.3.3 [utf-8,pthreads], x86_64-unknown-linux-gnu
+- SQLite 3.7.3, 3.7.15
+
 [Building]
 
   $ ./DIST gen
@@ -13,6 +18,8 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
   $ make
   % make install
 
+
+[How to use]
 
 * Connect
 
@@ -30,18 +37,24 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
   (dbi-make-connection (make <sqlite3-driver>) "filename.db;flags=262144" '())
   (dbi-connect "dbi:sqlite3:filename.db;flags=262144")
 
-  Please try URI filename if libsqlite3 support it.
+  Please try URI filename if libsqlite3 support it. Refer to following instruction.
 
 ** after 3.7.7, support URI filenames
 
   1. this open "filename.db" at current-directory with in memory mode and NOMUTEX.
   (dbi-make-connection (make <sqlite3-driver>) "file:filename.db?mode=memory;flags=32768" '())
-   
+
   2. this open "filename.db?mode=memory" at current directory with NOMUTEX.
   (dbi-make-connection (make <sqlite3-driver>) "filename.db?mode=memory;flags=32768" '())
 
 
 * Sqlite3 specifics
+[Function] sqlite3-libversion
+
+Get libsqlite3 version as string.
+
+Example: "3.7.15"
+
 [Function] sqlite3-last-id
 
 Get ROWID which is INSERT into the argument connection in most recent successfully.
