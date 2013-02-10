@@ -1,4 +1,5 @@
 * follow dbi todo interface
+
 http://www.kahua.org/show/dev/DBI#H-lowvragr
 
 
@@ -6,11 +7,7 @@ http://www.kahua.org/show/dev/DBI#H-lowvragr
 
 imitate sqlite3-ruby
 
-* what behavior of Scm_Error in stub.
-
 * Check any cursor have already been open when executing query.
 
 * mutex
 sqlite3_db_mutex
-
-* throw <sqlite3-error> all of c function
