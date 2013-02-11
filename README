@@ -77,9 +77,8 @@ Get a list of all columns from argument table.
 
 [Function] with-transaction (may be removed future release)
 
-Execute proc one of the started transaction.
-Commit automatically when proc is returned normally.
-Rollback when proc raise error.
+Execute proc one of the started transaction.  Commit automatically
+when proc is returned normally.  Rollback when proc raise error.
 
 [Function] call-with-transaction (may be removed future release)
 
