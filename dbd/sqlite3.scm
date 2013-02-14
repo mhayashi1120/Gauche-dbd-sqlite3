@@ -39,7 +39,7 @@
 ;; This module's default named parameter is `:' prefix, same as
 ;; scheme constant symbol prefix.
 ;; http://www.sqlite.org/c3ref/bind_blob.html
-(define (sqlite3-keyword-name keyword)
+(define (keyword->sqlite3-param keyword)
   (let ([name (keyword->string keyword)])
     (cond
      [(#/^[@$:]/ name)
@@ -84,7 +84,7 @@
                    [x (x->string x)])])
         (unless (keyword? key)
           (error "Invalid keyword" key))
-        (let1 keyname (sqlite3-keyword-name key)
+        (let1 keyname (keyword->sqlite3-param key)
           (cons
            (cons (or keyname index) val)
            (loop (cddr keys) (+ index 1)))))])))
@@ -117,18 +117,18 @@
   (receive (db-name opt-alist)
       (cond
        [(assoc "db" option-alist) =>
-        ;; older version
+        ;; for backward compatibility
         (^p (values (cdr p) (delete p option-alist)))]
        [else
         ;; caller may misunderstand the URI parameter as options
-        ;; parse dsn 3rd section by myself.
+        ;; so parse dsn 3rd section by myself.
         (parse-connect-options options)])
     (let* ([conn (make <sqlite3-connection>
                    :filename db-name)]
            [flags (logior
                    (x->number (assoc-ref opt-alist "flags"))
                    ;; SQLITE_OPEN_URI (0x40) is not yet implemented at least 3.7.3
-                   ;; Probablly that will be the default value of libsqlite3.
+                   ;; Probablly that will be the default value of future libsqlite3.
                    ;; http://www.sqlite.org/uri.html
                    ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
                    #x40)])
@@ -152,12 +152,13 @@
 
   (let* ([db (slot-ref c '%handle)]
          [prepared (slot-ref q 'prepared)]
-         [query (if (string? prepared)
+         [pass-through? (string? prepared)]
+         [query (if pass-through?
                   prepared
                   (apply prepared params))]
          [stmt (call-cproc sqlite3-prepare db query)])
 
-    (when (string? prepared)
+    (when pass-through?
       (call-cproc sqlite3-bind-parameters stmt (keywords->params params)))
 
     (let1 result (make <sqlite3-result-set>
