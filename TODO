@@ -2,12 +2,5 @@
 
 http://www.kahua.org/show/dev/DBI#H-lowvragr
 
-
-* Check C implementation is
-
-imitate sqlite3-ruby
-
 * Check any cursor have already been open when executing query.
 
-* mutex
-sqlite3_db_mutex
