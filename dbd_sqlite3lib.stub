@@ -200,46 +200,35 @@
   (result (stmt-close stmt)))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
-  (let* ([rc::int])
-	(check-statement stmt)
+  (check-statement stmt)
 
-	(set! rc (sqlite3_step (-> stmt core)))
+  (while TRUE
+	(let* ([rc::int (sqlite3_step (-> stmt core))])
 
-	(case rc
-	  [(SQLITE_ROW)
-	   ;; returned from SELECT statement
-	   (return (make-row-vector stmt))]
-	  [(SQLITE_DONE)
-	   ;; returned from NO result set.
-	   ;; continue until result set is returned.
+	  (cond
+	   [(== rc SQLITE_ROW)
+		;; returned from SELECT statement
+		(result (make-row-vector stmt))
+		(break)]
+	   [(== rc SQLITE_DONE)
+		;; returned from NO result set.
+		;; continue until result set is returned.
 
-	   ;; stmt->tail has rest of multiple statements.
-	   (while (and (-> stmt tail) (* (-> stmt tail)))
+		(stmt-close stmt)
 
-		 (stmt-close stmt)
-		 (set! (-> stmt terminated) FALSE)
+		;; stmt->tail has rest of compound statements.
+		(unless (and (-> stmt tail) (* (-> stmt tail)))
+		  (result SCM_FALSE)
+		  (break))
 
-		 (prepare-statement (-> stmt db) (-> stmt tail) stmt)
+		(set! (-> stmt terminated) FALSE)
 
-		 (set! rc (sqlite3_step (-> stmt core)))
+		(prepare-statement (-> stmt db) (-> stmt tail) stmt)]
+	   [else
 
-		 (cond
-		  [(== rc SQLITE_ROW)
-		   (return (make-row-vector stmt))]
-		  [(== rc SQLITE_DONE)
-		   ;; Successfully finished non result statement.
-		   ]
-		  [else
-		   (Scm_Error "sqlite3_step failed: %s"
-					  (sqlite3_errmsg (-> stmt db core)))]))
-
-	   (stmt-close stmt)
-	   (result SCM_FALSE)]
-	  [else
-
-	   ;; http://www.sqlite.org/c3ref/c_abort.html
-	   (Scm_Error "sqlite3_step failed: %s"
-				  (sqlite3_errmsg (-> stmt db core)))])))
+		;; http://www.sqlite.org/c3ref/c_abort.html
+		(Scm_Error "sqlite3_step failed: %s"
+				   (sqlite3_errmsg (-> stmt db core)))]))))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
   (let* ([num::int (sqlite3_column_count (-> stmt core))]
