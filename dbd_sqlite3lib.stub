@@ -53,10 +53,9 @@
     (return FALSE)]
    [else
 	;; TODO cleanup all of unfinished statements?
-    ;; (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
-	;;   (Scm_Error "Failed to close database (%s)"
-	;; 			 (sqlite3_errmsg (-> db core))))
-	(sqlite3_close (-> db core))
+    (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
+	  (Scm_Error "Failed to close database (%s)"
+				 (sqlite3_errmsg (-> db core))))
     (set! (-> db core) NULL)
     (set! (-> db terminated) TRUE)
     (return TRUE)]))
@@ -70,6 +69,7 @@
     (unless (== (sqlite3_finalize (-> stmt core)) SQLITE_OK)
 	  (Scm_Error "Failed to close statement (%s)"
 				 (sqlite3_errmsg (-> stmt db core))))
+    (set! (-> stmt terminated) TRUE)
     (set! (-> stmt core) NULL)
     (return TRUE)]))
 
@@ -215,6 +215,10 @@
 
 	   ;; stmt->tail has rest of multiple statements.
 	   (while (and (-> stmt tail) (* (-> stmt tail)))
+
+		 (stmt-close stmt)
+		 (set! (-> stmt terminated) FALSE)
+
 		 (prepare-statement (-> stmt db) (-> stmt tail) stmt)
 
 		 (set! rc (sqlite3_step (-> stmt core)))
@@ -229,7 +233,7 @@
 		   (Scm_Error "sqlite3_step failed: %s"
 					  (sqlite3_errmsg (-> stmt db core)))]))
 
-	   (set! (-> stmt terminated) TRUE)
+	   (stmt-close stmt)
 	   (result SCM_FALSE)]
 	  [else
 

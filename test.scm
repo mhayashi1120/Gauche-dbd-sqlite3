@@ -15,14 +15,16 @@
 (define connection #f)
 
 (define (select-rows sql . params)
-  (map
-   identity
-   (apply dbi-do connection sql '() params)))
+  (let1 rset (apply dbi-do connection sql '() params)
+    (unwind-protect
+     (map identity rset)
+     (dbi-close rset))))
 
 (define (select-rows2 sql . params)
-  (map
-   identity
-   (apply dbi-do connection sql '(:pass-through #t) params)))
+  (let1 rset (apply dbi-do connection sql '(:pass-through #t) params)
+    (unwind-protect
+     (map identity rset)
+     (dbi-close rset))))
 
 (define (cleanup-test)
   (define (remove-file file)
@@ -42,7 +44,7 @@
          (class-of c)))
 
 (test* "Creating test table"
-       #t
+       #f
        (dbi-open?
         (dbi-execute
          ;; http://www.sqlite.org/datatype3.html
@@ -51,21 +53,21 @@
                       "CREATE TABLE tbl1(id INTEGER, name TEXT, image NONE, rate REAL);"))))
 
 (test* "Checking insert common fields"
-       #t
+       #f
        (dbi-open?
         (dbi-execute
          (dbi-prepare connection
                       "INSERT INTO tbl1 VALUES(1, 'name 1', x'0101', 0.8);"))))
 
 (test* "Checking insert common fields 2"
-       #t
+       #f
        (dbi-open?
         (dbi-execute
          (dbi-prepare connection "INSERT INTO tbl1 VALUES(?, ?, x'0202', ?);")
          2 "name 2" 0.7)))
 
 (test* "Checking insert common fields 3"
-       #t
+       #f
        (dbi-open?
         (dbi-do connection "INSERT INTO tbl1 (id) VALUES(3);")))
 
@@ -134,15 +136,15 @@
          ;; Open pending query
          (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
            (guard (e (else (print (string-join
-                                   (map
-                                    (cut condition-ref <> 'message)
-                                    (slot-ref e '%conditions))
-                                   ", "))))
-             (call-with-transaction connection
-               (lambda (tran)
-                 (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
-                 ;; non existent table
-                 (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+                                    (map
+                                     (cut condition-ref <> 'message)
+                                     (slot-ref e '%conditions))
+                                    ", "))))
+              (call-with-transaction connection
+                (lambda (tran)
+                  (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+                  ;; non existent table
+                  (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
            (dbi-close pending-rset)
            (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))]
  [else
@@ -154,18 +156,21 @@
          (list () (with-module dbd.sqlite3 <sqlite3-error>))
          ;; Open pending query
          (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
-           (guard (e (else (print (condition-ref e 'message))))
-             (call-with-transaction connection
-               (lambda (tran)
-                 (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
-                 ;; non existent table
-                 (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
-           (list
-           (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")
-           (guard (e [else (class-of e)])
-             (call-with-iterator pending-rset
-               (lambda (end? next)
-                 (next)))))))])
+           (unwind-protect
+            (begin
+              (guard (e (else (print (condition-ref e 'message))))
+                (call-with-transaction connection
+                  (lambda (tran)
+                    (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+                    ;; non existent table
+                    (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+              (list
+               (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")
+               (guard (e [else (class-of e)])
+                 (call-with-iterator pending-rset
+                   (lambda (end? next)
+                     (next))))))
+            (dbi-close pending-rset))))])
 
 (test* "Checking full bit number insertion"
        '(#(-1))
@@ -251,7 +256,7 @@
        '(#(401) #(402))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (401, 402); INSERT INTO tbl1 (id) VALUES (403);"))
 
-(test* "Checking compound statements before"
+(test* "Checking previous compound 2nd statements working"
        '(#(403))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403);"))
 
@@ -354,7 +359,9 @@
 (test* "Checking multibyte filename"
        #t
        (let1 c (dbi-connect "dbi:sqlite3:てすと.db")
-         (dbi-open? c)))
+         (unwind-protect
+          (dbi-open? c)
+          (dbi-close c))))
        
 
 (test-end)
