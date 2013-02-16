@@ -1,12 +1,15 @@
 Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
-
 [Requirements]
 
-- pkg-config
 - GCC
 - Gauche 0.9.2 or later (http://www.practical-scheme.net/gauche/)
 - SQLite 3.7.3 or later (http://www.sqlite.org/)
+
+[Developing Environment]
+
+- Gauche scheme shell, version 0.9.3.3 [utf-8,pthreads], x86_64-unknown-linux-gnu
+- SQLite 3.7.3, 3.7.15
 
 [Building]
 
@@ -16,8 +19,46 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
   % make install
 
 
+[How to use]
 
-* sqlite3 specifics
+* Connect
+
+** sqlite3 driver support following connect-options
+
+  1. flags: path to sqlite3_open_v2 with
+            SQLITE_OPEN_READWRITE SQLITE_OPEN_CREATE flag
+  
+      See more details here
+      http://www.sqlite.org/c3ref/c_open_autoproxy.html
+  
+  2. db   : Do not use this. Only support backward compatibility.
+
+** Following two examples will return same result.
+
+  (dbi-make-connection (make <sqlite3-driver>) "filename.db;flags=262144" '())
+  (dbi-connect "dbi:sqlite3:filename.db;flags=262144")
+
+  Please try URI filename if libsqlite3 support it. Refer to following instruction.
+
+** after 3.7.7, support URI filenames
+
+  1. this open "filename.db" at current-directory with on memory mode and NOMUTEX.
+
+  (dbi-make-connection (make <sqlite3-driver>) "file:filename.db?mode=memory;flags=32768" '())
+
+  2. this open "filename.db?mode=memory" at current directory with NOMUTEX.
+
+  (dbi-make-connection (make <sqlite3-driver>) "filename.db?mode=memory;flags=32768" '())
+
+
+* Sqlite3 specifics
+
+[Function] sqlite3-libversion
+
+Get libsqlite3 version as string.
+
+Example: "3.7.15"
+
 [Function] sqlite3-last-id
 
 Get ROWID which is INSERT into the argument connection in most recently.
@@ -34,21 +75,16 @@ http://www.sqlite.org/c3ref/errcode.html
 
 Get a list of all columns from argument table.
 
-[Function] with-transaction
-* TODO may be removed future release
+[Function] with-transaction (may be removed future release)
 
-Execute proc one of the started transaction.
-Commit automatically when proc is returned normally.
-Rollback when proc raise error.
+Execute proc one of the started transaction.  Commit automatically
+when proc is returned normally.  Rollback when proc raise error.
 
-[Function] call-with-transaction
-* TODO may be removed future release
+[Function] call-with-transaction (may be removed future release)
 
 Same as with-transaction but proc must accept a transaction object.
 
-
-[Function] dbi-tables
-* may be changed future release
+[Function] dbi-tables (may be changed future release)
 
 Get a list of tables from the argument connection.
 

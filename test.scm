@@ -7,16 +7,33 @@
 (use dbi)
 (use dbd.sqlite3)
 (use gauche.collection)
+(use gauche.version)
 (test-module 'dbd.sqlite3)  ;; This checks the exported symbols are indeed bound.
 
 ;; Normal operation test
 
 (define connection #f)
 
-(define (select-rows sql)
+(define (select-rows sql . params)
   (map
    identity
-   (dbi-do connection sql)))
+   (apply dbi-do connection sql '() params)))
+
+(define (select-rows2 sql . params)
+  (map
+   identity
+   (apply dbi-do connection sql '(:pass-through #t) params)))
+
+(define (cleanup-test)
+  (define (remove-file file)
+    (when (file-exists? file)
+      (sys-unlink file)))
+  (remove-file "test.db")
+  (remove-file "test.db-journal")
+  (remove-file "てすと.db")
+  (remove-file "unacceptable.db"))
+
+(cleanup-test)
 
 (test* "dbi-connect"
        <sqlite3-connection>
@@ -107,23 +124,48 @@
                (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))
          (select-rows "SELECT id FROM tbl1 WHERE id IN (103, 104)")))
 
+;; http://www.sqlite.org/changes.html
+
 ;; See the http://www.sqlite.org/lang_transaction.html ROLLBACK section.
-(test* "Checking transaction unable rollback"
-       '(#(201))
-       (begin
+(cond
+ [(version<? (sqlite3-libversion) "3.7.11")
+  (test* "Checking transaction unable rollback"
+         '(#(201))
          ;; Open pending query
-         (dbi-do connection "SELECT 1 AS FOO;")
-         (guard (e (else (print (string-join
-                                 (map
-                                  (cut condition-ref <> 'message)
-                                  (slot-ref e '%conditions))
-                                 ", "))))
-           (call-with-transaction connection
-             (lambda (tran)
-               (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
-               ;; non existent table
-               (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
-         (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))
+         (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
+           (guard (e (else (print (string-join
+                                   (map
+                                    (cut condition-ref <> 'message)
+                                    (slot-ref e '%conditions))
+                                   ", "))))
+             (call-with-transaction connection
+               (lambda (tran)
+                 (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+                 ;; non existent table
+                 (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+           (dbi-close pending-rset)
+           (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))]
+ [else
+  ;; 2012 March 20 (3.7.11)
+  ;; Pending statements no longer block ROLLBACK. Instead, the pending
+  ;; statement will return SQLITE_ABORT upon next access after the
+  ;; ROLLBACK.
+  (test* "Checking transaction unable rollback"
+         (list () (with-module dbd.sqlite3 <sqlite3-error>))
+         ;; Open pending query
+         (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
+           (guard (e (else (print (condition-ref e 'message))))
+             (call-with-transaction connection
+               (lambda (tran)
+                 (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
+                 ;; non existent table
+                 (dbi-do connection "INSERT INTO tbl (id) VALUES(202);"))))
+           (list
+           (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")
+           (guard (e [else (class-of e)])
+             (call-with-iterator pending-rset
+               (lambda (end? next)
+                 (next)))))))])
 
 (test* "Checking full bit number insertion"
        '(#(-1))
@@ -186,11 +228,14 @@
          (select-rows "SELECT id FROM tbl1 WHERE id = 9223372036854775807")))
 
 (test* "Checking auto increment id"
-       1
+       '(1 2)
        (begin
          (dbi-do connection "CREATE TABLE tbl2(id INTEGER PRIMARY KEY);")
          (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
-         (sqlite3-last-id connection)))
+         (let1 res1 (sqlite3-last-id connection)
+           (dbi-do connection "INSERT INTO tbl2 (id) VALUES(NULL);")
+           (let1 res2 (sqlite3-last-id connection)
+             (list res1 res2)))))
 
 (test* "Checking compound INSERT statements"
        '(#(301) #(302) #(303))
@@ -210,35 +255,108 @@
        '(#(403))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403);"))
 
-;; TODO
+(test* "Checking compound statements getting 1st select and 2nd has syntax error"
+       (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+       (select-rows "SELECT 1; SELECT;"))
+
 (test* "Checking multiple SELECT statements"
        '(#(403) #(301 #f) #(302 #f))
        (select-rows "SELECT id FROM tbl1 WHERE id IN (403); SELECT id, name FROM tbl1 WHERE id IN (301, 302)"))
 
-;; FIXME
-(test* "Checking VACUUM is not working."
-       (test-error <error>)
-       (dbi-do connection "VACUUM"))
+(test* "Checking parameter bindings"
+       '(#("abcdeあ" #xffff #x7fffffffffffffff 0.99 #f))
+       (select-rows "SELECT ?, ?, ?, ?, ?;"
+                    "abcdeあ" #xffff #x7fffffffffffffff 0.99 #f))
+
+(test* "Checking named parameter bindings (pass-through)"
+       '(#("abcdeあ" #xffff #x7fffffffffffffff #x-8000000000000000 #u8(0 1 15 255) 0.99 #f
+           #x7fffffffffffffff #x-8000000000000000))
+       (select-rows2 
+        (string-append
+         "SELECT "
+         " :string_multibyte1, :small_int, :bigpositive_num, :bignegative_num"
+         ", :u8vector, :float, :null1"
+         ", :overflow_positive_num, :overflow_negative_num"
+         )
+        :string_multibyte1 "abcdeあ"
+        :small_int #xffff
+        :bigpositive_num #x7fffffffffffffff
+        :overflow_positive_num #x8000000000000000
+        :bignegative_num #x-8000000000000000
+        :overflow_negative_num #x-8000000000000001
+        :u8vector #u8(0 1 15 255)
+        :float 0.99
+        :null1 #f))
+
+(test* "Checking named parameter bindings 2 (pass-through)"
+       '(#(1 2 3 4 5 6 7))
+       (select-rows2 
+        (string-append
+         "SELECT "
+         ;; : prefix
+         "  :a1"
+         ;; @ prefix
+         ", @a2"
+         ;; $ prefix
+         ", $a3"
+         ;; indexed parameter
+         ", ?4"
+         ;; anonymous parameter
+         ", ?"
+         ;; keyword has ? prefix
+         ", ?6"
+         ;; keyword has : prefix
+         ", :a7")
+        :a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a7 7))
+
+(cond
+ [(version>? (sqlite3-libversion) "3.7.15")
+  (test* "Checking VACUUM is not working when there is pending statement."
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+         (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
+           (guard (e [else
+                      (print (condition-ref e 'message))
+                      (dbi-close pending-rset)
+                      (raise e)])
+             (dbi-do connection "VACUUM"))))
+  (test* "Checking VACUUM is working."
+         '()
+         (map (^x x) (dbi-do connection "VACUUM;")))]
+ [else
+  (test* "Checking VACUUM is not working."
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+         (dbi-do connection "VACUUM"))])
 
 (test* "Checking dbi-tables"
        '("tbl1" "tbl2")
        (dbi-tables connection))
 
-(test* "(dbi-open? connection)"
+(test* "Checking still open connection"
 		#t
 		(dbi-open? connection))
 
-(test* "(dbi-close connection)"
+(test* "Checking closing connection"
 		#t
 		(dbi-close connection))
 
-(test* "(dbi-open? connection)"
+(test* "Checking connection was closed"
 		#f
 		(dbi-open? connection))
 
+(test* "Checking failed to open db"
+       (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+       (begin
+         (with-output-to-file "unacceptable.db"
+           (^()))
+         (sys-chmod "unacceptable.db" #o000)
+         (dbi-connect "dbi:sqlite3:unacceptable.db")))
+
+(test* "Checking multibyte filename"
+       #t
+       (let1 c (dbi-connect "dbi:sqlite3:てすと.db")
+         (dbi-open? c)))
+       
+
 (test-end)
 
-(sys-unlink "test.db")
-(and (file-exists? "test.db-journal")
-     (sys-unlink "test.db-journal"))
-
+(cleanup-test)

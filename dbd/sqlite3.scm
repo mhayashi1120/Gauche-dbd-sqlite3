@@ -1,4 +1,5 @@
 (define-module dbd.sqlite3
+  (use gauche.version)
   (use dbi)
   (use gauche.uvector)
   (use util.list)
@@ -11,7 +12,7 @@
    <sqlite3-result-set>
    sqlite3-error-message
    sqlite3-table-columns
-   sqlite3-last-id
+   sqlite3-last-id sqlite3-libversion
    ))
 (select-module dbd.sqlite3)
 
@@ -26,10 +27,67 @@
              (^r (dbi-get-value r 1)) table))
 
 (define (sqlite3-error-message conn)
-  (sqlite3-errmsg (slot-ref conn '%handle)))
+  (call-cproc sqlite3-last-errmsg (slot-ref conn '%handle)))
 
 (define (sqlite3-last-id conn)
-  (sqlite3-last-insert-rowid (slot-ref conn '%handle)))
+  (call-cproc sqlite3-last-insert-rowid (slot-ref conn '%handle)))
+
+(define (sqlite3-libversion)
+  (call-cproc sqlite3-version))
+
+;; SQLite3 accept `:' `@' `$' as named parameter prefix.
+;; This module's default named parameter is `:' prefix, same as
+;; scheme constant symbol prefix.
+;; http://www.sqlite.org/c3ref/bind_blob.html
+(define (keyword->sqlite3-param keyword)
+  (let ([name (keyword->string keyword)])
+    (cond
+     [(#/^[@$:]/ name)
+      ;; @VVV, $VVV
+      name]
+     [(#/^\??([0-9]+)$/ name) => 
+      ;; ?NNN
+      (^m #`"?,(m 1)")]
+     [(string=? "?" name)
+      ;; no named parameter
+      #f]
+     [else
+      ;; :VVV 
+      #`":,|name|"])))
+
+;; params = (:a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a7 7)
+;; sql = "select :a1, @a2, $a3, ?4, ?, ?6, :a7"
+;; this return #(1 2 3 4 5 6 7) row
+(define (keywords->params keywords)
+  (let loop ([keys keywords]
+             [index 1])
+    (cond
+     [(null? keys)
+      '()]
+     [else
+      (unless (>= (length keys) 2)
+        (error "keyword list not even" keys))
+      (let ([key (car keys)]
+            [val (match (cadr keys)
+                   ;; text
+                   [(? string? x) x]
+                   ;; integer
+                   [(or (? fixnum? x)
+                        (? bignum? x)) x]
+                   ;; float
+                   [(? real? x) x]
+                   ;; blob
+                   [(? u8vector? x) x]
+                   ;; NULL
+                   [#f #f]
+                   ;; handle as text
+                   [x (x->string x)])])
+        (unless (keyword? key)
+          (error "Invalid keyword" key))
+        (let1 keyname (keyword->sqlite3-param key)
+          (cons
+           (cons (or keyname index) val)
+           (loop (cddr keys) (+ index 1)))))])))
 
 ;;;
 ;;; DBI interfaces
@@ -56,56 +114,83 @@
                                     (options <string>)
                                     (option-alist <list>)
                                     . args)
-  (let* ([db-name
-          (match option-alist
-                 (((maybe-db . #t) . rest) maybe-db)
-                 (else (assoc-ref option-alist "db" #f)))]
-         [conn (make <sqlite3-connection>
-                 :filename db-name)])
-    (guard (e [else (error <sqlite3-error> :message "SQLite3 open failed")])
-      (slot-set! conn '%handle (sqlite3-open db-name)))
-    conn))
+  (receive (db-name opt-alist)
+      (cond
+       [(assoc "db" option-alist) =>
+        ;; for backward compatibility
+        (^p (values (cdr p) (delete p option-alist)))]
+       [else
+        ;; caller may misunderstand the URI parameter as options
+        ;; so parse dsn 3rd section by myself.
+        (parse-connect-options options)])
+    (let* ([conn (make <sqlite3-connection>
+                   :filename db-name)]
+           [flags (logior
+                   (x->number (assoc-ref opt-alist "flags"))
+                   ;; SQLITE_OPEN_URI (0x40) is not yet implemented at least 3.7.3
+                   ;; Probablly that will be the default value of future libsqlite3.
+                   ;; http://www.sqlite.org/uri.html
+                   ;; http://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
+                   #x40)])
+      (slot-set! conn '%handle
+                 (call-cproc sqlite3-open db-name flags))
+      conn)))
+
+(define (parse-connect-options s)
+  (rxmatch-case s
+    [#/^([^;]+);(.*)$/ (#f db-name options)
+     (let1 alist (map (lambda (nv)
+                        (receive (n v) (string-scan nv "=" 'both)
+                          (if n (cons n v) (cons nv #t))))
+                      (string-split options #\;))
+       (values db-name alist))]
+    [else
+     (values s '())]))
 
 (define-method dbi-execute-using-connection
   ((c <sqlite3-connection>) (q <dbi-query>) params)
 
-  (define (prepare db query)
-    (let1 stmt (make-sqlite-statement)
-      (unless (guard (e [else
-                         (error <sqlite3-error>
-                                :message (condition-ref e 'message))])
-                (sqlite3-prepare db stmt query))
-        (let1 msg (sqlite3-errmsg db)
-          (errorf
-           <sqlite3-error> :error-message msg
-           "SQLite3 prepare failed: ~a" msg)))
-      (make <sqlite3-result-set>
-        :db db
-        :handle stmt
-        :field-names (sqlite3-statement-column-names stmt))))
+  (let* ([db (slot-ref c '%handle)]
+         [prepared (slot-ref q 'prepared)]
+         [pass-through? (string? prepared)]
+         [query (if pass-through?
+                  prepared
+                  (apply prepared params))]
+         [stmt (call-cproc sqlite3-prepare db query)])
 
-  (let* ([query-string (apply (slot-ref q 'prepared) params)]
-         [result (prepare (slot-ref c '%handle) query-string)])
-    ;; execute first step of this statement
-    (slot-set! result '%stream (statement-next result))
-    result))
+    (when pass-through?
+      (call-cproc sqlite3-bind-parameters stmt (keywords->params params)))
+
+    (let1 result (make <sqlite3-result-set>
+                   :db db
+                   :handle stmt
+                   :field-names (call-cproc sqlite3-statement-column-names stmt))
+      ;; execute first step of this statement
+      (slot-set! result '%stream (statement-next result))
+      result)))
+
+(define-method dbi-prepare ((c <sqlite3-connection>) (sql <string>) . args)
+  (let-keywords args ((pass-through #f))
+    (let1 prepared (if pass-through
+                     sql
+                     (dbi-prepare-sql c sql))
+      (make <dbi-query> :connection c
+            :prepared prepared))))
 
 (define-method dbi-escape-sql ((c <sqlite3-connection>) str)
-  (sqlite3-escape-string str))
+  (call-cproc sqlite3-escape-string str))
 
 (define-method dbi-open? ((c <sqlite3-connection>))
-  (not (sqlite3-closed-p (slot-ref c '%handle))))
+  (not (call-cproc sqlite3-db-closed? (slot-ref c '%handle))))
 
 (define-method dbi-open? ((c <sqlite3-result-set>))
-  (not (sqlite3-statement-closed-p (slot-ref c '%handle))))
+  (not (call-cproc sqlite3-statement-closed? (slot-ref c '%handle))))
 
 (define-method dbi-close ((c <sqlite3-connection>))
-  (guard (e (else (error <sqlite3-error>
-                         :message (condition-ref e 'message))))
-    (sqlite3-close (slot-ref c '%handle))))
+  (call-cproc sqlite3-db-close (slot-ref c '%handle)))
 
 (define-method dbi-close ((result-set <sqlite3-result-set>))
-  (sqlite3-statement-finish (slot-ref result-set '%handle)))
+  (call-cproc sqlite3-statement-close (slot-ref result-set '%handle)))
 
 ;;;
 ;;; Relation interfaces
@@ -151,15 +236,10 @@
 (define (statement-next rset)
 
   (define (next)
-    (guard (e [else
-               (let1 msg (sqlite3-errmsg (slot-ref rset '%db))
-                 (errorf
-                  <sqlite3-error> :error-message msg
-                  "SQLite3 step failed: ~a" msg))])
-      (sqlite3-statement-step (slot-ref rset '%handle))))
+    (call-cproc sqlite3-statement-step (slot-ref rset '%handle)))
 
   (cond
-   [(sqlite3-statement-end? (slot-ref rset '%handle))
+   [(call-cproc sqlite3-statement-end? (slot-ref rset '%handle))
     stream-null]
    [(next) =>
     (^n (stream-delay (cons n (statement-next rset))))]
@@ -167,7 +247,7 @@
     stream-null]))
 
 ;;;
-;;;TODO dbi extensions
+;;; dbi extensions (Experimental)
 ;;;
 
 ;;TODO isolation level
@@ -187,9 +267,10 @@
   (let1 tran (apply dbi-begin-transaction conn flags)
     (guard (e [else
                (guard (e2 [else
+                           ;; FATAL: failed to rollback
                            (raise (make-compound-condition e e2))])
-                 (dbi-rollback tran)
-                 (raise e))])
+                 (dbi-rollback tran))
+               (raise e)])
       (begin0
         (proc tran)
         (dbi-commit tran)))))
@@ -209,6 +290,7 @@
 ;;; Transaction interfaces
 ;;;
 
+;; http://www.sqlite.org/lang_transaction.html
 (define-class <sqlite3-transaction> (<dbi-transaction>)
   ())
 
@@ -226,7 +308,7 @@
                "ROLLBACK TRANSACTION"))
 
 ;;;
-;;; dbi extensions TODO  URL
+;;; dbi extensions <http://www.kahua.org/show/dev/DBI#H-lowvragr
 ;;;
 
 (define-method dbi-tables ((conn <sqlite3-connection>))
@@ -240,9 +322,15 @@
 
 (define (do-select con sql proc . args)
   (let1 rset (apply dbi-do con sql args)
-    (begin0 (map proc rset)
-      (dbi-close rset))))
+    (unwind-protect
+     (map proc rset)
+     (dbi-close rset))))
 
 (define (do-one-time con sql . args)
   (let1 r (apply dbi-do con sql args)
     (dbi-close r)))
+
+(define (call-cproc cproc . args)
+  (guard (e [else (error <sqlite3-error>
+                         :message (condition-ref e 'message))])
+    (apply cproc args)))

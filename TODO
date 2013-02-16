@@ -1,4 +1,5 @@
 * follow dbi todo interface
+
 http://www.kahua.org/show/dev/DBI#H-lowvragr
 
 
@@ -10,4 +11,3 @@ imitate sqlite3-ruby
 
 * mutex
 sqlite3_db_mutex
-
