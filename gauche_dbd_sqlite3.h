@@ -18,6 +18,7 @@ ScmClass *Sqlite3DbClass;
 typedef struct ScmSqlite3DbRec {
 	sqlite3 *core;
 	int terminated;
+	ScmObj stmts;
 } ScmSqlite3Db;
 
 ScmClass *Sqlite3StmtClass;

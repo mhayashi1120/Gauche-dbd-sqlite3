@@ -135,11 +135,11 @@
          '(#(201))
          ;; Open pending query
          (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
-           (guard (e (else (print (string-join
+           (guard (e [else (print (string-join
                                     (map
                                      (cut condition-ref <> 'message)
                                      (slot-ref e '%conditions))
-                                    ", "))))
+                                    ", "))])
               (call-with-transaction connection
                 (lambda (tran)
                   (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
@@ -152,13 +152,13 @@
   ;; Pending statements no longer block ROLLBACK. Instead, the pending
   ;; statement will return SQLITE_ABORT upon next access after the
   ;; ROLLBACK.
-  (test* "Checking transaction unable rollback"
+  (test* "Checking transaction can rollback (but previous version can not)"
          (list () (with-module dbd.sqlite3 <sqlite3-error>))
          ;; Open pending query
          (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
            (unwind-protect
             (begin
-              (guard (e (else (print (condition-ref e 'message))))
+              (guard (e [else (print (condition-ref e 'message))])
                 (call-with-transaction connection
                   (lambda (tran)
                     (dbi-do connection "INSERT INTO tbl1 (id) VALUES(201);")
@@ -167,9 +167,7 @@
               (list
                (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")
                (guard (e [else (class-of e)])
-                 (call-with-iterator pending-rset
-                   (lambda (end? next)
-                     (next))))))
+                 (map (^x x) pending-rset))))
             (dbi-close pending-rset))))])
 
 (test* "Checking full bit number insertion"

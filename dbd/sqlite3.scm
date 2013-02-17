@@ -237,9 +237,7 @@
 (define (statement-next rset)
 
   (define (next)
-    (guard (e [else (dbi-close rset)
-                    (raise e)])
-      (call-cproc sqlite3-statement-step (slot-ref rset '%handle))))
+    (call-cproc sqlite3-statement-step (slot-ref rset '%handle)))
 
   (cond
    [(call-cproc sqlite3-statement-end? (slot-ref rset '%handle))

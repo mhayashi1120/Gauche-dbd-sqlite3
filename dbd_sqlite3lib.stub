@@ -44,7 +44,25 @@
       (Scm_Error "Failed to prepare statement (%s)"
 				 (sqlite3_errmsg (-> db core))))
     (set! (-> stmt core) handle)
+	(when (SCM_FALSEP (Scm_Memq (SCM_OBJ stmt) (-> db stmts)))
+	  (set! (-> db stmts) (Scm_Cons (SCM_OBJ stmt) (-> db stmts))))
     (set! (-> stmt tail) tail)))
+
+(define-cfn stmt-close (stmt::ScmSqlite3Stmt* noerror::int)
+  :: int :static
+  (cond
+   [(== (-> stmt core) NULL)
+    (return FALSE)]
+   [else
+    (unless (== (sqlite3_finalize (-> stmt core)) SQLITE_OK)
+	  (unless noerror
+		(Scm_Error "Failed to close statement (%s)"
+				   (sqlite3_errmsg (-> stmt db core)))))
+    (set! (-> stmt terminated) TRUE)
+    (set! (-> stmt core) NULL)
+	(set! (-> stmt db stmts)
+		  (Scm_Delete (SCM_OBJ stmt) (-> stmt db stmts) SCM_CMP_EQ))
+    (return TRUE)]))
 
 (define-cfn db-close (db::ScmSqlite3Db*)
   :: int :static
@@ -53,24 +71,13 @@
     (return FALSE)]
    [else
 	;; TODO cleanup all of unfinished statements?
+	(dolist (stmt (-> db stmts))
+	  (stmt-close (SQLITE3_STMT_HANDLE_UNBOX stmt) TRUE))
     (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
 	  (Scm_Error "Failed to close database (%s)"
 				 (sqlite3_errmsg (-> db core))))
     (set! (-> db core) NULL)
     (set! (-> db terminated) TRUE)
-    (return TRUE)]))
-
-(define-cfn stmt-close (stmt::ScmSqlite3Stmt*)
-  :: int :static
-  (cond
-   [(== (-> stmt core) NULL)
-    (return FALSE)]
-   [else
-    (unless (== (sqlite3_finalize (-> stmt core)) SQLITE_OK)
-	  (Scm_Error "Failed to close statement (%s)"
-				 (sqlite3_errmsg (-> stmt db core))))
-    (set! (-> stmt terminated) TRUE)
-    (set! (-> stmt core) NULL)
     (return TRUE)]))
 
 (define-cfn db-finalize (obj::ScmObj)
@@ -83,7 +90,7 @@
   :: void :static
   (SCM_ASSERT (SCM_FOREIGN_POINTER_P obj))
   (let* ([stmt::ScmSqlite3Stmt* (SQLITE3_STMT_HANDLE_UNBOX obj)])
-    (stmt-close stmt)))
+    (stmt-close stmt TRUE)))
 
 (define-cfn bind-index-param (stmt::sqlite3_stmt* index::int value::ScmObj)
   :: void :static
@@ -167,6 +174,7 @@
 								 NULL) SQLITE_OK)
       (Scm_Error "Failed to open database %s" cpath))
     (set! (-> db terminated) FALSE)
+	(set! (-> db stmts) SCM_NIL)
     (result db)))
 
 (define-cproc sqlite3-db-close (db::<sqlite3-db>) :: <boolean>
@@ -197,7 +205,7 @@
     (result (== handle NULL))))
 
 (define-cproc sqlite3-statement-close (stmt::<sqlite3-statement>) :: <boolean>
-  (result (stmt-close stmt)))
+  (result (stmt-close stmt FALSE)))
 
 (define-cproc sqlite3-statement-step (stmt::<sqlite3-statement>)
   (check-statement stmt)
@@ -214,7 +222,7 @@
 		;; returned from NO result set.
 		;; continue until result set is returned.
 
-		(stmt-close stmt)
+		(stmt-close stmt TRUE)
 
 		;; stmt->tail has rest of compound statements.
 		(unless (and (-> stmt tail) (* (-> stmt tail)))
@@ -225,9 +233,9 @@
 
 		(prepare-statement (-> stmt db) (-> stmt tail) stmt)]
 	   [else
-
+		(stmt-close stmt TRUE)
 		;; http://www.sqlite.org/c3ref/c_abort.html
-		(Scm_Error "sqlite3_step failed: %s"
+		(Scm_Error "sqlite3_step failed (%s)"
 				   (sqlite3_errmsg (-> stmt db core)))]))))
 
 (define-cproc sqlite3-statement-column-names (stmt::<sqlite3-statement>)
