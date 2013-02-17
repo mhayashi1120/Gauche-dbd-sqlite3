@@ -70,7 +70,6 @@
    [(== (-> db core) NULL)
     (return FALSE)]
    [else
-	;; TODO cleanup all of unfinished statements?
 	(dolist (stmt (-> db stmts))
 	  (stmt-close (SQLITE3_STMT_HANDLE_UNBOX stmt) TRUE))
     (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
@@ -122,6 +121,28 @@
   (let* ([index::int (sqlite3_bind_parameter_index stmt name)])
 	(bind-index-param stmt index value)))
 
+(define-cfn bind-parameters (stmt0::ScmSqlite3Stmt*)
+  :: void :static
+  (let* ([db::sqlite3* (-> stmt0 db core)]
+		 [stmt::sqlite3_stmt* (-> stmt0 core)]
+		 [params::ScmObj (-> stmt0 params)])
+	;; may fail if stmt is being processed.
+	(unless (== (sqlite3_reset stmt) SQLITE_OK)
+	  (Scm_Error "sqlite3_reset failed (%s)"
+				 (sqlite3_errmsg db)))
+	(dolist (pair params)
+	  (unless (SCM_PAIRP pair)
+		(Scm_Error "Invalid params"))
+	  (let* ([key::ScmObj (SCM_CAR pair)]
+			 [value::ScmObj (SCM_CDR pair)])
+		(cond
+		 [(SCM_STRINGP key)
+		  (bind-name-param stmt (Scm_GetStringConst (SCM_STRING key)) value)]
+		 [(SCM_UINTEGERP key)
+		  (bind-index-param stmt (Scm_GetIntegerU key) value)]
+		 [else
+		  (Scm_Error "Not a supported param key")])))))
+
 (define-cfn make-row-vector (stmt::ScmSqlite3Stmt*)
   :: ScmObj :static
   (let* ([i::(unsigned int)]
@@ -152,9 +173,7 @@
 
 (define-cfn make-statement () :: ScmSqlite3Stmt* :static
   (let* ([stmt::ScmSqlite3Stmt* (SCM_MALLOC (sizeof ScmSqlite3Stmt))])
-    (set! (-> stmt core) NULL)
-    (set! (-> stmt executed) FALSE)
-    (set! (-> stmt terminated) FALSE)
+    (set! (-> stmt params) SCM_NIL)
     (return stmt)))
 
 ;;;
@@ -173,7 +192,6 @@
 								 (logior flags def_flags)
 								 NULL) SQLITE_OK)
       (Scm_Error "Failed to open database %s" cpath))
-    (set! (-> db terminated) FALSE)
 	(set! (-> db stmts) SCM_NIL)
     (result db)))
 
@@ -191,7 +209,6 @@
 	(prepare-statement db query stmt)
 	(set! (-> stmt db) db)
 	(set! (-> stmt executed) TRUE)
-	(set! (-> stmt terminated) FALSE)
 	(result stmt)))
 
 (define-cproc sqlite3-statement? (obj) :: <boolean>
@@ -231,7 +248,8 @@
 
 		(set! (-> stmt terminated) FALSE)
 
-		(prepare-statement (-> stmt db) (-> stmt tail) stmt)]
+		(prepare-statement (-> stmt db) (-> stmt tail) stmt)
+		(bind-parameters stmt)]
 	   [else
 		;; force shutdown the statement if non expected result
 		;; SQLITE_BUSY, SQLITE_ABORT, SQLITE_ERROR ...
@@ -252,23 +270,8 @@
     (result res)))
 
 (define-cproc sqlite3-bind-parameters (stmt::<sqlite3-statement> params::<list>)
-  (let* ([handle::(sqlite3_stmt*) (-> stmt core)])
-	;; may fail if stmt is being processed.
-	(unless (== (sqlite3_reset handle) SQLITE_OK)
-	  (Scm_Error "sqlite3_reset failed (%s)"
-				 (sqlite3_errmsg (-> stmt db core))))
-	(dolist (pair params)
-	  (unless (SCM_PAIRP pair)
-		(Scm_Error "Invalid params"))
-	  (let* ([key::ScmObj (SCM_CAR pair)]
-			 [value::ScmObj (SCM_CDR pair)])
-		(cond
-		 [(SCM_STRINGP key)
-		  (bind-name-param handle (Scm_GetStringConst (SCM_STRING key)) value)]
-		 [(SCM_UINTEGERP key)
-		  (bind-index-param handle (Scm_GetIntegerU key) value)]
-		 [else
-		  (Scm_Error "Not a supported param key")])))))
+  (set! (-> stmt params) params)
+  (bind-parameters stmt))
 
 (define-cproc sqlite3-escape-string (value::<string>)
   (let*  ([tmp::char* (sqlite3_mprintf "%q" (Scm_GetStringConst value))]

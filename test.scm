@@ -311,6 +311,14 @@
          ", :a7")
         :a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a7 7))
 
+(test* "Checking compound statements for named parameter (pass-through)"
+       '(#(1 2) #(1 3))
+       (select-rows2 
+        (string-append
+        "SELECT :a1, :a2;"
+        "SELECT :a1, :a3;")
+        :a1 1 :a2 2 :a3 3))
+
 (cond
  [(version>? (sqlite3-libversion) "3.7.15")
   (test* "Checking VACUUM is not working when there is pending statement."

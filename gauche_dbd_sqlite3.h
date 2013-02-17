@@ -34,6 +34,7 @@ typedef struct ScmSqlite3StmtRec {
 	const char *tail;
 	int executed;
 	int terminated;
+	ScmObj params;
 } ScmSqlite3Stmt;
 
 extern void Scm_Init_sqlite3lib(ScmModule *module);
