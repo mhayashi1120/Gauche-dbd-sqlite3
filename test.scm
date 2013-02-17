@@ -319,8 +319,15 @@
         "SELECT :a1, :a3;")
         :a1 1 :a2 2 :a3 3))
 
+(test* "Checking compound statements with no parameter (pass-through)"
+       '(#("a1" "a2") #("a3" "a4"))
+       (select-rows2 
+        (string-append
+        "SELECT 'a1', 'a2';"
+        "SELECT 'a3', 'a4';")))
+
 (cond
- [(version>? (sqlite3-libversion) "3.7.15")
+ [(version>? (sqlite3-libversion) "3.7.12")
   (test* "Checking VACUUM is not working when there is pending statement."
          (test-error (with-module dbd.sqlite3 <sqlite3-error>))
          (let1 pending-rset (dbi-do connection "SELECT 1 FROM tbl1;")
@@ -353,13 +360,16 @@
 		#f
 		(dbi-open? connection))
 
-(test* "Checking failed to open db"
-       (test-error (with-module dbd.sqlite3 <sqlite3-error>))
-       (begin
-         (with-output-to-file "unacceptable.db"
-           (^()))
-         (sys-chmod "unacceptable.db" #o000)
-         (dbi-connect "dbi:sqlite3:unacceptable.db")))
+(cond-expand
+ [gauche.os.cygwin]
+ [else
+  (test* "Checking failed to open db"
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+         (begin
+           (with-output-to-file "unacceptable.db"
+             (^()))
+           (sys-chmod "unacceptable.db" #o000)
+           (dbi-connect "dbi:sqlite3:unacceptable.db")))])
 
 (test* "Checking multibyte filename"
        #t
