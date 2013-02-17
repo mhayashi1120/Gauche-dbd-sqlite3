@@ -126,8 +126,6 @@
                (dbi-do connection "INSERT INTO tbl (id) VALUES(104);"))))
          (select-rows "SELECT id FROM tbl1 WHERE id IN (103, 104)")))
 
-;; http://www.sqlite.org/changes.html
-
 ;; See the http://www.sqlite.org/lang_transaction.html ROLLBACK section.
 (cond
  [(version<? (sqlite3-libversion) "3.7.11")
@@ -148,6 +146,7 @@
            (dbi-close pending-rset)
            (select-rows "SELECT id FROM tbl1 WHERE id IN (201, 202)")))]
  [else
+  ;; http://www.sqlite.org/changes.html
   ;; 2012 March 20 (3.7.11)
   ;; Pending statements no longer block ROLLBACK. Instead, the pending
   ;; statement will return SQLITE_ABORT upon next access after the

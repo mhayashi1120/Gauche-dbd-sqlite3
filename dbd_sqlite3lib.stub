@@ -233,7 +233,10 @@
 
 		(prepare-statement (-> stmt db) (-> stmt tail) stmt)]
 	   [else
+		;; force shutdown the statement if non expected result
+		;; SQLITE_BUSY, SQLITE_ABORT, SQLITE_ERROR ...
 		(stmt-close stmt TRUE)
+
 		;; http://www.sqlite.org/c3ref/c_abort.html
 		(Scm_Error "sqlite3_step failed (%s)"
 				   (sqlite3_errmsg (-> stmt db core)))]))))
