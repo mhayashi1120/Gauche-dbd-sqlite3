@@ -273,7 +273,7 @@
 (test* "Checking named parameter bindings (pass-through)"
        '(#("abcdeあ" #xffff #x7fffffffffffffff #x-8000000000000000 #u8(0 1 15 255) 0.99 #f
            #x7fffffffffffffff #x-8000000000000000))
-       (select-rows2 
+       (select-rows2
         (string-append
          "SELECT "
          " :string_multibyte1, :small_int, :bigpositive_num, :bignegative_num"
@@ -292,7 +292,7 @@
 
 (test* "Checking named parameter bindings 2 (pass-through)"
        '(#(1 2 3 4 5 6 7))
-       (select-rows2 
+       (select-rows2
         (string-append
          "SELECT "
          ;; : prefix
@@ -313,7 +313,7 @@
 
 (test* "Checking compound statements for named parameter (pass-through)"
        '(#(1 2) #(1 3))
-       (select-rows2 
+       (select-rows2
         (string-append
         "SELECT :a1, :a2;"
         "SELECT :a1, :a3;")
@@ -321,7 +321,7 @@
 
 (test* "Checking compound statements with no parameter (pass-through)"
        '(#("a1" "a2") #("a3" "a4"))
-       (select-rows2 
+       (select-rows2
         (string-append
         "SELECT 'a1', 'a2';"
         "SELECT 'a3', 'a4';")))
@@ -377,7 +377,7 @@
          (unwind-protect
           (dbi-open? c)
           (dbi-close c))))
-       
+
 
 (test-end)
 
