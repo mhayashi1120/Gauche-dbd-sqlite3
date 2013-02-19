@@ -361,6 +361,7 @@
 		(dbi-open? connection))
 
 (cond-expand
+ ;; FIXME: cygwin version can't chmod file..
  [gauche.os.cygwin]
  [else
   (test* "Checking failed to open db"
