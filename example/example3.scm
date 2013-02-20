@@ -2,7 +2,7 @@
 (use gauche.collection)
 (use dbd.sqlite3)
 
-(define connection 
+(define connection
   (dbi-connect "dbi:sqlite3:example.db"))
 
 (call-with-transaction connection
