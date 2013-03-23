@@ -169,6 +169,18 @@
                  (map (^x x) pending-rset))))
             (dbi-close pending-rset))))])
 
+(let* ([query (dbi-prepare connection "SELECT 1 FROM tbl1;")]
+       [rset (dbi-do connection "SELECT 1 FROM tbl1;")])
+  (begin
+    (unwind-protect
+     (test* "Checking working statements 1"
+            1
+            (length (sqlite3-working-statements connection)))
+     (dbi-close rset))
+    (test* "Checking working statements 2"
+           0
+           (length (sqlite3-working-statements connection)))))
+
 (test* "Checking full bit number insertion"
        '(#(-1))
        (begin
@@ -343,6 +355,10 @@
   (test* "Checking VACUUM is not working."
          (test-error (with-module dbd.sqlite3 <sqlite3-error>))
          (dbi-do connection "VACUUM"))])
+
+(test* "Checking no working statements"
+       '()
+       (sqlite3-working-statements connection))
 
 (test* "Checking dbi-tables"
        '("tbl1" "tbl2")

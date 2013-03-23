@@ -286,4 +286,11 @@
 (define-cproc sqlite3-last-insert-rowid (db::<sqlite3-db>) :: <ulong>
   (result (sqlite3_last_insert_rowid (-> db core))))
 
-
+(define-cproc sqlite3-statements (db::<sqlite3-db>)
+  (if (-> db terminated)
+	(result SCM_NIL)
+	;;TODO how to <pair> keep in db->stmts 
+	(let* ([res SCM_NIL])
+	  (dolist (stmt (-> db stmts))
+		(set! res (Scm_Cons (SQLITE3_STMT_HANDLE_BOX stmt) res)))
+	  (result res))))

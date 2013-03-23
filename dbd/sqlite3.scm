@@ -14,6 +14,7 @@
    sqlite3-error-message
    sqlite3-table-columns
    sqlite3-last-id sqlite3-libversion
+   sqlite3-working-statements
    ))
 (select-module dbd.sqlite3)
 
@@ -35,6 +36,11 @@
 
 (define (sqlite3-libversion)
   (call-cproc sqlite3-version))
+
+;; Get list of working statements for debugging purpose
+;;TODO describe the problem of statements
+(define (sqlite3-working-statements conn)
+  (call-cproc sqlite3-statements (slot-ref conn '%handle)))
 
 ;; SQLite3 accept `:' `@' `$' as named parameter prefix.
 ;; This module's default named parameter is `:' prefix, same as
