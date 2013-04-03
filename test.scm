@@ -8,6 +8,7 @@
 (use dbd.sqlite3)
 (use gauche.collection)
 (use gauche.version)
+(use gauche.threads)
 (test-module 'dbd.sqlite3)  ;; This checks the exported symbols are indeed bound.
 
 ;; Normal operation test
@@ -375,6 +376,47 @@
 (test* "Checking connection was closed"
 		#f
 		(dbi-open? connection))
+
+(let1 con1 (dbi-connect "dbi:sqlite3:test.db")
+  (unwind-protect
+   (let1 con2 (dbi-connect "dbi:sqlite3:test.db")
+     (unwind-protect
+      (let1 r1 (dbi-do con1 "BEGIN; INSERT INTO tbl1 (id) VALUES(501);")
+
+        (unwind-protect
+         (test* "Checking raising error if busy time is not set"
+                (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+                (dbi-do con2 "BEGIN; INSERT INTO tbl1 (id) VALUES(502);"))
+         (dbi-close r1)))
+
+      (dbi-do con2 "ROLLBACK;")
+
+      ;; 1 second
+      (sqlite3-set-timeout con2 1000)
+
+      (test* "Checking timed out if another process lock db too long time"
+             (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+             (dbi-do con2 "BEGIN; INSERT INTO tbl1 (id) VALUES(502);"))
+
+      (dbi-do con2 "ROLLBACK;")
+
+      ;; 3 seconds
+      (sqlite3-set-timeout con2 3000)
+      
+      (let1 th (make-thread
+                (^ ()
+                  (sys-sleep 1)
+                  (dbi-do con1 "COMMIT;")))
+        (thread-start! th))
+
+      (test* "Checking waiting for another process release db"
+             '(#(501) #(502))
+             (begin
+               (dbi-do con2 "BEGIN; INSERT INTO tbl1 (id) VALUES(502);COMMIT;")
+               (map identity (dbi-do con2 "SELECT id FROM tbl1 WHERE id IN (501, 502)"))))
+
+      (dbi-close con2)))
+   (dbi-close con1)))
 
 (cond-expand
  ;; FIXME: cygwin version can't chmod file..

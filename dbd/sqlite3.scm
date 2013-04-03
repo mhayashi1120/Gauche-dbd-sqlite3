@@ -14,6 +14,7 @@
    sqlite3-error-message
    sqlite3-table-columns
    sqlite3-last-id sqlite3-libversion
+   sqlite3-set-timeout
    sqlite3-working-statements
    ))
 (select-module dbd.sqlite3)
@@ -37,8 +38,14 @@
 (define (sqlite3-libversion)
   (call-cproc sqlite3-version))
 
+;; Set timeout milli seconds of connection
+;; See more information
+;; http://www.sqlite.org/c3ref/busy_handler.html
+;; http://www.sqlite.org/c3ref/busy_timeout.html
+(define (sqlite3-set-timeout conn ms)
+  (call-cproc sqlite3-db-timeout (slot-ref conn '%handle) ms))
+
 ;; Get list of working statements for debugging purpose
-;;TODO describe the problem of statements
 (define (sqlite3-working-statements conn)
   (call-cproc sqlite3-statements (slot-ref conn '%handle)))
 

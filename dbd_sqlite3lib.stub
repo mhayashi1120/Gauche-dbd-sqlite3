@@ -71,7 +71,8 @@
     (return FALSE)]
    [else
 	(dolist (stmt (-> db stmts))
-	  (stmt-close (SQLITE3_STMT_HANDLE_UNBOX stmt) TRUE))
+	  ;;TODO cast?
+	  (stmt-close (cast (ScmSqlite3Stmt *) stmt) TRUE))
     (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
 	  (Scm_Error "Failed to close database (%s)"
 				 (sqlite3_errmsg (-> db core))))
@@ -201,6 +202,9 @@
 (define-cproc sqlite3-db-closed? (db::<sqlite3-db>) :: <boolean>
   (result (-> db terminated)))
 
+(define-cproc sqlite3-db-timeout (db::<sqlite3-db> ms::<int32>)
+  (sqlite3_busy_timeout (-> db core) ms))
+
 (define-cproc sqlite3-prepare (db::<sqlite3-db> sql::<string>)
   :: <sqlite3-statement>
   (let* ([stmt::ScmSqlite3Stmt* (make-statement)]
@@ -289,8 +293,7 @@
 (define-cproc sqlite3-statements (db::<sqlite3-db>)
   (if (-> db terminated)
 	(result SCM_NIL)
-	;;TODO how to <pair> keep in db->stmts 
 	(let* ([res SCM_NIL])
 	  (dolist (stmt (-> db stmts))
-		(set! res (Scm_Cons (SQLITE3_STMT_HANDLE_BOX stmt) res)))
+		(set! res (Scm_Cons stmt res)))
 	  (result res))))
