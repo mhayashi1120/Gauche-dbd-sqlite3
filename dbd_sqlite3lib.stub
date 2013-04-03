@@ -45,7 +45,7 @@
 				 (sqlite3_errmsg (-> db core))))
     (set! (-> stmt core) handle)
 	(when (SCM_FALSEP (Scm_Memq (SCM_OBJ stmt) (-> db stmts)))
-	  (set! (-> db stmts) (Scm_Cons stmt (-> db stmts))))
+	  (set! (-> db stmts) (Scm_Cons (SCM_OBJ stmt) (-> db stmts))))
     (set! (-> stmt tail) tail)))
 
 (define-cfn stmt-close (stmt::ScmSqlite3Stmt* noerror::int)
@@ -71,7 +71,7 @@
     (return FALSE)]
    [else
 	(dolist (stmt (-> db stmts))
-	  (stmt-close stmt TRUE))
+	  (stmt-close (cast (ScmSqlite3Stmt *) stmt) TRUE))
     (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
 	  (Scm_Error "Failed to close database (%s)"
 				 (sqlite3_errmsg (-> db core))))
