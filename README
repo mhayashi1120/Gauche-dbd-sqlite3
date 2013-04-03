@@ -59,6 +59,14 @@ Get libsqlite3 version as string.
 
 Example: "3.7.15"
 
+[Function] sqlite3-set-timeout
+
+Set timeout milli seconds to the connection.
+Sqlite3 default behavior, make immediately error if the database is locked.
+
+http://www.sqlite.org/c3ref/busy_timeout.html
+http://www.sqlite.org/c3ref/busy_handler.html
+
 [Function] sqlite3-last-id
 
 Get ROWID which is INSERT into the argument connection in most recently.
