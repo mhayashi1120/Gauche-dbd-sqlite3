@@ -38,6 +38,8 @@
 
 (cleanup-test)
 
+(format #t "Testing libsqlite3 version => ~a\n" (sqlite3-libversion))
+
 (test* "dbi-connect"
        <sqlite3-connection>
        (let1 c (dbi-connect "dbi:sqlite3:test.db")
