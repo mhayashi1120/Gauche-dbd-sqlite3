@@ -9,10 +9,12 @@
 (initcode
  (set! Sqlite3DbClass (Scm_MakeForeignPointerClass
                        mod "<sqlite3-db>" NULL
-                       db-finalize 0))
+                       db-finalize
+					   SCM_FOREIGN_POINTER_KEEP_IDENTITY))
  (set! Sqlite3StmtClass (Scm_MakeForeignPointerClass
                          mod "<sqlite3-statement>" NULL
-                         stmt-finalize 0)))
+                         stmt-finalize
+						 SCM_FOREIGN_POINTER_KEEP_IDENTITY)))
 
 (define-type <sqlite3-db> "ScmSqlite3Db *" #f
   "SCM_SQLITE3_DB_P" "SQLITE3_DB_HANDLE_UNBOX" "SQLITE3_DB_HANDLE_BOX")
@@ -44,8 +46,9 @@
       (Scm_Error "Failed to prepare statement (%s)"
 				 (sqlite3_errmsg (-> db core))))
     (set! (-> stmt core) handle)
-	(when (SCM_FALSEP (Scm_Memq (SCM_OBJ stmt) (-> db stmts)))
-	  (set! (-> db stmts) (Scm_Cons (SCM_OBJ stmt) (-> db stmts))))
+	(let* ([box (SQLITE3_STMT_HANDLE_BOX stmt)])
+	  (when (SCM_FALSEP (Scm_Memq box (-> db stmts)))
+		(set! (-> db stmts) (Scm_Cons box (-> db stmts)))))
     (set! (-> stmt tail) tail)))
 
 (define-cfn stmt-close (stmt::ScmSqlite3Stmt* noerror::int)
@@ -60,8 +63,9 @@
 				   (sqlite3_errmsg (-> stmt db core)))))
     (set! (-> stmt terminated) TRUE)
     (set! (-> stmt core) NULL)
-	(set! (-> stmt db stmts)
-		  (Scm_Delete (SCM_OBJ stmt) (-> stmt db stmts) SCM_CMP_EQ))
+	(let* ([box (SQLITE3_STMT_HANDLE_BOX stmt)])
+	  (set! (-> stmt db stmts)
+			(Scm_Delete box (-> stmt db stmts) SCM_CMP_EQ)))
     (return TRUE)]))
 
 (define-cfn db-close (db::ScmSqlite3Db*)
@@ -70,9 +74,8 @@
    [(== (-> db core) NULL)
     (return FALSE)]
    [else
-	(dolist (stmt (-> db stmts))
-	  ;;TODO cast?
-	  (stmt-close (cast (ScmSqlite3Stmt *) stmt) TRUE))
+	(dolist (box (-> db stmts))
+	  (stmt-close (SQLITE3_STMT_HANDLE_UNBOX box) TRUE))
     (unless (== (sqlite3_close (-> db core)) SQLITE_OK)
 	  (Scm_Error "Failed to close database (%s)"
 				 (sqlite3_errmsg (-> db core))))
@@ -294,6 +297,6 @@
   (if (-> db terminated)
 	(result SCM_NIL)
 	(let* ([res SCM_NIL])
-	  (dolist (stmt (-> db stmts))
-		(set! res (Scm_Cons stmt res)))
+	  (dolist (box (-> db stmts))
+		(set! res (Scm_Cons box res)))
 	  (result res))))

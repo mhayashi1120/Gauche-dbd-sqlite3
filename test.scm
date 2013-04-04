@@ -171,7 +171,7 @@
             (dbi-close pending-rset))))])
 
 (let* ([query (dbi-prepare connection "SELECT 1 FROM tbl1;")]
-       [rset (dbi-do connection "SELECT 1 FROM tbl1;")])
+       [rset (dbi-execute query)])
   (begin
     (unwind-protect
      (test* "Checking working statements 1"
@@ -417,6 +417,19 @@
 
       (dbi-close con2)))
    (dbi-close con1)))
+
+(let* ([con (dbi-connect "dbi:sqlite3:test.db")]
+       [r1 #f]
+       [r2 #f])
+  (unwind-protect
+   (begin
+     (set! r1 (dbi-do con "BEGIN; INSERT INTO tbl1 (id) VALUES(601);"))
+     (set! r2 (dbi-do con "SELECT id FROM tbl1 WHERE 600 <= id AND id <= 699")))
+   (begin
+     (test* "Checking working procedure"
+            1
+            (length (sqlite3-working-statements con)))
+     (dbi-close con))))
 
 (cond-expand
  ;; FIXME: cygwin version can't chmod file..
