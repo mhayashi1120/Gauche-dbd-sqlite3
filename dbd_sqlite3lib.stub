@@ -96,34 +96,34 @@
     (stmt-close stmt TRUE)))
 
 (define-cfn bind-index-param (stmt::sqlite3_stmt* index::int value::ScmObj)
-  :: void :static
+  :: int :static
   (cond
    [(or (SCM_INTP value)
 		(SCM_BIGNUMP value))
 	;; Not consider about overflow
 	;; beyond the max/min value truncate to max/min int64 value
-	(sqlite3_bind_int64 stmt index (Scm_GetInteger64 value))]
+	(return (sqlite3_bind_int64 stmt index (Scm_GetInteger64 value)))]
    [(SCM_REALP value)
-	(sqlite3_bind_double stmt index (Scm_GetDouble value))]
+	(return (sqlite3_bind_double stmt index (Scm_GetDouble value)))]
    [(SCM_U8VECTORP value)
-	(sqlite3_bind_blob stmt index (SCM_U8VECTOR_ELEMENTS value)
-					   (SCM_U8VECTOR_SIZE value)
-					   ;; keep allocated memory
-					   SQLITE_STATIC)]
+	(return (sqlite3_bind_blob stmt index (SCM_U8VECTOR_ELEMENTS value)
+							   (SCM_U8VECTOR_SIZE value)
+							   ;; keep allocated memory
+							   SQLITE_STATIC))]
    [(SCM_STRINGP value)
-	(sqlite3_bind_text stmt index (Scm_GetStringConst (SCM_STRING value))
-					   (SCM_STRING_SIZE value)
-					   ;; keep allocated memory
-					   SQLITE_STATIC)]
+	(return (sqlite3_bind_text stmt index (Scm_GetStringConst (SCM_STRING value))
+							   (SCM_STRING_SIZE value)
+							   ;; keep allocated memory
+							   SQLITE_STATIC))]
    [(SCM_FALSEP value)
-	(sqlite3_bind_null stmt index)]
+	(return (sqlite3_bind_null stmt index))]
    [else
 	(Scm_Error "Not a supported scheme object")]))
 
 (define-cfn bind-name-param (stmt::sqlite3_stmt* name::(const char*) value::ScmObj)
-  :: void :static
+  :: int :static
   (let* ([index::int (sqlite3_bind_parameter_index stmt name)])
-	(bind-index-param stmt index value)))
+	(return (bind-index-param stmt index value))))
 
 (define-cfn bind-parameters (stmt0::ScmSqlite3Stmt*)
   :: void :static
@@ -141,9 +141,21 @@
 			 [value::ScmObj (SCM_CDR pair)])
 		(cond
 		 [(SCM_STRINGP key)
-		  (bind-name-param stmt (Scm_GetStringConst (SCM_STRING key)) value)]
+		  (let* ([ckey::(const char *) (Scm_GetStringConst (SCM_STRING key))]
+				 [result::int (bind-name-param stmt ckey value)])
+			;; To handle compound statement, suppress error check
+			;; (unless (== result SQLITE_OK)
+			;;   (Scm_Error "Failed to bind parameter `%s' (%s)"
+			;; 			 ckey (sqlite3_errmsg db)))
+			)]
 		 [(SCM_UINTEGERP key)
-		  (bind-index-param stmt (Scm_GetIntegerU key) value)]
+		  (let* ([cint::(unsigned int) (Scm_GetIntegerU key)]
+				 [result::int (bind-index-param stmt cint value)])
+			;; To handle compound statement, suppress error check
+			;; (unless (== result SQLITE_OK)
+			;;   (Scm_Error "Failed to bind parameter `%d' (%s)"
+			;; 			 cint (sqlite3_errmsg db)))
+			)]
 		 [else
 		  (Scm_Error "Not a supported param key")])))))
 

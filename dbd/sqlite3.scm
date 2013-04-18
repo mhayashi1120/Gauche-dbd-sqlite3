@@ -1,4 +1,5 @@
 (define-module dbd.sqlite3
+  (use srfi-13)
   (use gauche.version)
   (use dbi)
   (use gauche.uvector)
@@ -54,10 +55,19 @@
 ;; scheme constant symbol prefix.
 ;; http://www.sqlite.org/c3ref/bind_blob.html
 (define (keyword->sqlite3-param keyword)
+
+  ;; Only check lisp like symbol. This is certainly a wrong name.
+  ;; Ignore other invalid parameter name, since to handle compound
+  ;; statements.
+  (define (check-name n)
+    (when (string-contains n "-")
+      (error <sqlite3-error> "Invalid sql parameter name.")))
+
   (let ([name (keyword->string keyword)])
     (cond
      [(#/^[@$:]/ name)
       ;; @VVV, $VVV
+      (check-name name)
       name]
      [(#/^\??([0-9]+)$/ name) =>
       ;; ?NNN
@@ -67,6 +77,7 @@
       #f]
      [else
       ;; :VVV
+      (check-name name)
       #`":,|name|"])))
 
 ;; params = (:a1 1 :@a2 2 :$a3 3 :4 4 :? 5 :?6 6 ::a7 7)
@@ -173,7 +184,11 @@
          [stmt (call-cproc sqlite3-prepare db query)])
 
     (when pass-through?
-      (call-cproc sqlite3-bind-parameters stmt (keywords->params params)))
+      (guard (e [else
+                 ;; clean up imcomplete result
+                 (call-cproc sqlite3-statement-close stmt)
+                 (raise e)])
+        (call-cproc sqlite3-bind-parameters stmt (keywords->params params))))
 
     (let1 result (make <sqlite3-result-set>
                    :db db
