@@ -286,24 +286,40 @@
                     "abcdeあ" #xffff #x7fffffffffffffff 0.99 #f))
 
 (test* "Checking named parameter bindings (pass-through)"
-       '(#("abcdeあ" #xffff #x7fffffffffffffff #x-8000000000000000 #u8(0 1 15 255) 0.99 #f
-           #x7fffffffffffffff #x-8000000000000000))
+       '(#("abcdeあ" #xffff #x7fffffffffffffff #x-8000000000000000 #u8(0 1 15 255) 0.99 #f))
        (select-rows2
         (string-append
          "SELECT "
          " :string_multibyte1, :small_int, :bigpositive_num, :bignegative_num"
          ", :u8vector, :float, :null1"
-         ", :overflow_positive_num, :overflow_negative_num"
          )
         :string_multibyte1 "abcdeあ"
         :small_int #xffff
         :bigpositive_num #x7fffffffffffffff
-        :overflow_positive_num #x8000000000000000
         :bignegative_num #x-8000000000000000
-        :overflow_negative_num #x-8000000000000001
         :u8vector #u8(0 1 15 255)
         :float 0.99
         :null1 #f))
+
+(cond
+ [(version<=? (gauche-version) "0.9.3.3")
+  (test* "Checking named parameter overflow number (pass-through)"
+         '(#(#x-8000000000000000 #x7fffffffffffffff))
+         (select-rows2
+          "SELECT :overflow_negative_num, :overflow_positive_num"
+          :overflow_negative_num #x-8000000000000001
+          :overflow_positive_num #x8000000000000000))]
+ [else
+  (test* "Checking named parameter overflow positive number (pass-through)"
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+         (select-rows2
+          "SELECT :overflow_positive_num"
+          :overflow_positive_num #x8000000000000000))
+  (test* "Checking named parameter overflow negative number (pass-through)"
+         (test-error (with-module dbd.sqlite3 <sqlite3-error>))
+         (select-rows2
+          "SELECT :overflow_negative_num"
+          :overflow_negative_num #x-8000000000000001))])
 
 (test* "Checking named parameter bindings 2 (pass-through)"
        '(#(1 2 3 4 5 6 7))
