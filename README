@@ -25,7 +25,7 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
 ** sqlite3 driver support following connect-options
 
-  1. flags: path to sqlite3_open_v2 with
+  1. flags: pass to sqlite3_open_v2 with
             SQLITE_OPEN_READWRITE SQLITE_OPEN_CREATE flag
   
       See more details here
@@ -40,7 +40,7 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
   Please try URI filename if libsqlite3 support it. Refer to following instruction.
 
-** after 3.7.7, support URI filenames
+** after libsqlite3 3.7.7, support URI filenames
 
   1. this open "filename.db" at current-directory with on memory mode and NOMUTEX.
 
@@ -55,7 +55,7 @@ Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
 [Function] sqlite3-libversion
 
-Get libsqlite3 version as string.
+Get libsqlite3 version as a string.
 
 Example: "3.7.15"
 

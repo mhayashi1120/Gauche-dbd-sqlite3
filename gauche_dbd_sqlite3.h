@@ -1,5 +1,10 @@
-#ifndef DBD_SQLITE3_H
-#define DBD_SQLITE3_H
+/*
+ * gauche_dbd_sqlite3.h
+ */
+
+/* Prologue */
+#ifndef GAUCHE_DBD_SQLITE3_H
+#define GAUCHE_DBD_SQLITE3_H
 
 #include <gauche.h>
 #include <gauche/extend.h>
@@ -7,6 +12,8 @@
 #include <gauche/uvector.h>
 
 #include <sqlite3.h>
+
+SCM_DECL_BEGIN
 
 ScmClass *Sqlite3DbClass;
 
@@ -42,4 +49,4 @@ extern void Scm_Init_sqlite3lib(ScmModule *module);
 /* Epilogue */
 SCM_DECL_END
 
-#endif  /* DBD_SQLITE3_H */
+#endif  /* GAUCHE_DBD_SQLITE3_H */
