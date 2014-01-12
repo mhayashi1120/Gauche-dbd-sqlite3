@@ -379,6 +379,10 @@
          (test-error (with-module dbd.sqlite3 <sqlite3-error>))
          (dbi-do connection "VACUUM"))])
 
+(test* "Checking statement which has end of space."
+      '(#(1))
+      (select-rows2 "SELECT 1; "))
+
 (test* "Checking no working statements"
        '()
        (sqlite3-working-statements connection))

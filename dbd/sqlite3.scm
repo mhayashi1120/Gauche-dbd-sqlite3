@@ -201,7 +201,12 @@
 (define-method dbi-prepare ((c <sqlite3-connection>) (sql <string>) . args)
   (let-keywords args ((pass-through #f))
     (let1 prepared (if pass-through
-                     sql
+                     ;; FIXME workaround
+                     ;;  send query "SELECT 1; " with pass-through
+                     ;; which make "not an error" from libsqlite3
+                     ;; because which contains end of space.
+                     ;; should check in C code? Not only following chars?
+                     (string-trim-right sql #[\s\t\n])
                      (dbi-prepare-sql c sql))
       (make <dbi-query> :connection c
             :prepared prepared))))

@@ -4,13 +4,13 @@ dnl  process this file with autoconf to generate 'configure'.
 dnl
 
 AC_PREREQ(2.54)
-AC_INIT(gauche-dbd-sqlite3, 0.3.6, mhayashi1120@gmail.com, , https://github.com/mhayashi1120/Gauche-dbd-sqlite3)
+AC_INIT(gauche-dbd-sqlite3, 0.3.7, mhayashi1120@gmail.com, , https://github.com/mhayashi1120/Gauche-dbd-sqlite3)
 dnl If you want to use the system name (OS, architecture, etc) in the
 dnl configure, uncomment the following line.  In such a case, you need
 dnl to copy config.guess and config.sub from automake distribution.
 dnl AC_CANONICAL_SYSTEM
 
-dnl Replace @LOCAL_PATHS@ by --with-local option.
+dnl Replace @LDFLAGS@ and @CPPFLAGS@ by --with-sqlite3 option.
 AC_ARG_WITH(sqlite3,
   AC_HELP_STRING([--with-sqlite3=PATH     Use sqlite3 devkit installed under PATH],
                  [For each PATH, add PATH/include to the include search
