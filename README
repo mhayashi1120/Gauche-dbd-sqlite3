@@ -1,5 +1,8 @@
 Gauche-dbd-sqlite3 is a dbd module for Gauche.
 
+This repository has a license problem https://github.com/mhayashi1120/Gauche-dbd-sqlite3/issues/1
+Moved to https://github.com/mhayashi1120/Gauche-dbd-sqlite that is newly created.
+
 [Requirements]
 
 - GCC
